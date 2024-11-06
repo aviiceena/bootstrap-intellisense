@@ -37,18 +37,21 @@ const extractCssClasses = (css) => {
 const getBootstrapCdnLink = async () => {
   try {
     const htmlFiles = await vscode.workspace.findFiles('**/*.html');
-    const cdnRegex = /<link[^>]+href=["']((?!cdn)[^"']*bootstrap[^"']*\.css)["']/;
+    const cdnRegex =
+      /(?<!<!--.*)<link[^>]+href=["'](@{[^}]*}|(?!cdn|\.\/|\.\.\/)[^"']*bootstrap[^"']*\.css)["'](?!.*-->)/;
 
     for (const file of htmlFiles) {
       const content = await fs.promises.readFile(file.fsPath, 'utf8');
       const match = content.match(cdnRegex);
 
-      if (match) return match[1];
+      if (match) {
+        return match[1].includes('@{') ? match[1].split('{')[1].split('}')[0] : match[1];
+      }
     }
 
     return null;
   } catch (error) {
-    vscode.window.showWarningMessage(`Error finding Bootstrap CDN link: ${error}`);
+    vscode.window.showInformationMessage(`Error finding Bootstrap CDN link: ${error}`);
     return null;
   }
 };
@@ -58,6 +61,7 @@ const getCssFromCdn = async (url) => {
     let bootstrapVersion = null;
     const versionRegex = /(?:bootstrap[\/@]?)(\d+\.\d+\.\d+)/;
     const matches = url.match(versionRegex);
+
     if (matches && matches[1]) {
       bootstrapVersion = matches[1];
     }
@@ -67,14 +71,15 @@ const getCssFromCdn = async (url) => {
     );
     return response.data;
   } catch (error) {
-    vscode.window.showWarningMessage(`Error fetching Bootstrap CSS from CDN: ${error}`);
+    vscode.window.showInformationMessage(`Error fetching Bootstrap CSS from CDN: ${error}`);
     return null;
   }
 };
 
 const getCssFromLocalFiles = async () => {
   const htmlFiles = await vscode.workspace.findFiles('**/*.html');
-  const bootstrapLinkRegex = /<link[^>]+href=["']((?!.*jsdelivr).*\bbootstrap\b[^"']*)["']/g;
+  const bootstrapLinkRegex =
+    /(?<!<!--.*)<link[^>]+href=["']((?!.*jsdelivr|.*webjars)[^"']*bootstrap[^"']*)["'](?!.*-->)/g;
   let searchPatterns = ['**/node_modules/bootstrap/dist/css/bootstrap.css'];
 
   for (const file of htmlFiles) {
@@ -82,8 +87,9 @@ const getCssFromLocalFiles = async () => {
     const bootstrapLinkMatches = [...fileContent.matchAll(bootstrapLinkRegex)];
 
     for (const match of bootstrapLinkMatches) {
-      const bootstrapFilePath = match[1];
-      console.log(bootstrapFilePath);
+      let bootstrapFilePath = match[1];
+
+      bootstrapFilePath = bootstrapFilePath.includes('static') ? bootstrapFilePath.split("'")[1] : bootstrapFilePath;
 
       const normalizedPath = bootstrapFilePath.replace(/^\.\/|^\/|^\..\//, '');
 
@@ -96,42 +102,48 @@ const getCssFromLocalFiles = async () => {
   }
 
   try {
+    let cssFound = false;
+
     for (const pattern of searchPatterns) {
       const bootstrapFiles = await vscode.workspace.findFiles(pattern);
+
       for (const file of bootstrapFiles) {
         const bootstrapPath = file.fsPath;
+
         if (fs.existsSync(bootstrapPath)) {
           const css = await fs.promises.readFile(bootstrapPath, 'utf8');
+          cssFound = true;
           return css;
         } else {
           vscode.window.showInformationMessage(`Bootstrap file not found: ${bootstrapPath}`);
         }
       }
     }
-    return null;
+
+    if (!cssFound) {
+      vscode.window.showInformationMessage(`No Bootstrap CSS file was found in the specified paths.`);
+    }
   } catch (error) {
+    console.log('Error finding Bootstrap file in local files:', error);
     vscode.window.showInformationMessage(`Error finding Bootstrap file in local files: ${error}`);
-    return null;
   }
 };
 
 const getClasses = async () => {
   try {
-    let css = await getCssFromLocalFiles();
+    const bootstrapCdnLink = await getBootstrapCdnLink();
 
-    if (!css) {
-      const cdnLink = await getBootstrapCdnLink();
-      if (cdnLink) {
-        css = await getCssFromCdn(cdnLink);
-      }
+    const css = bootstrapCdnLink ? await getCssFromCdn(bootstrapCdnLink) : await getCssFromLocalFiles();
+
+    if (css) {
+      return extractCssClasses(css);
+    } else {
+      vscode.window.showInformationMessage(`No Bootstrap CSS found to extract classes from.`);
+      return [];
     }
-
-    if (css) return extractCssClasses(css);
-
-    return null;
   } catch (error) {
-    vscode.window.showInformationMessage(`Error finding Bootstrap classes: ${error}`);
-    return null;
+    vscode.window.showInformationMessage(`Error getting Bootstrap classes: ${error}`);
+    return [];
   }
 };
 

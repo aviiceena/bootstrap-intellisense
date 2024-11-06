@@ -4,7 +4,7 @@ const vscode = require('vscode');
 const getBootstrapVersionFromIndexHtml = async () => {
   try {
     const htmlFiles = await vscode.workspace.findFiles('**/*.html');
-    const bootstrapLinkRegex = /<link[^>]+href=["']((?!cdn)[^"']*bootstrap[^"']*\.css)["']/g;
+    const bootstrapLinkRegex = /(?<!<!--.*)<link[^>]+href=["']((?!cdn)[^"']*bootstrap[^"']*\.css)["'](?!.*-->)/g;
     const bootstrapVersionRegex = /\d+\.\d+\.\d+/;
 
     for (const file of htmlFiles) {
@@ -32,7 +32,7 @@ const getBootstrapVersionFromLocalCssFile = async () => {
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const htmlFiles = await vscode.workspace.findFiles('**/*.html');
-    const bootstrapLinkRegex = /<link[^>]+href=["']((?!.*jsdelivr).*\bbootstrap\b[^"']*)["']/g;
+    const bootstrapLinkRegex = /(?<!<!--.*)<link[^>]+href=["']((?!jsdelivr)[^"']*\bbootstrap\b[^"']*)["'](?!.*-->)/g;
     const bootstrapVersionRegex = /Bootstrap\s+v(\d+\.\d+\.\d+)/g;
     let searchPatterns = ['**/node_modules/bootstrap/dist/css/bootstrap.css'];
 

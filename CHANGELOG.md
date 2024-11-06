@@ -1,24 +1,34 @@
 # Change Log
 
+## v1.6.0 2024-11-06
+
+- 🐛 Fixed: Regex now ignores commented code blocks when matching <link> tags for Bootstrap CSS files.
+- 📦 Added: Support for handling JAR files.
+- 🆕 Added: Support for Webjars.
+
+## v1.5.8 2024-10-18
+
+- Added jinja-html support
+
 ## v1.5.7 2024-10-07
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.5.6 2024-10-03
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.5.5 2024-10-01
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.5.4 2024-09-29
 
-- 🐛 Fix Duplicate CSS classes.
+- 🐛 Fixed Duplicate CSS classes.
 
 ## v1.5.3 2024-07-12
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.5.2 2024-07-11
 
@@ -26,33 +36,33 @@
 
 ## v1.5.1 2024-07-11
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.5.0 2024-07-11
 
 - ✨ Added support for suggesting CSS classes from Local Bootstrap css Files as well.
-- ♻️ Refactor code for improved maintainability and readability.
-- 🐛 Fix minor bugs.
+- ♻️ Refactored code for improved maintainability and readability.
+- 🐛 Fixed minor bugs.
 
 ## v1.4.2 2024-05-27
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.4.1 2024-05-26
 
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 
 ## v1.4.0 2024-05-26
 
-- ♻️ Refactor code for improved maintainability and readability.
+- ♻️ Refactored code for improved maintainability and readability.
 - ✨ Enhance feature: Now able to view complete CSS for class names.
-- 🐛 Fix minor bugs.
+- 🐛 Fixed minor bugs.
 - 🛠️ Updated README file
 
 ## v1.3.0 2024-05-26
 
 - ✨ Added support for suggesting CSS classes from CDN links as well.
-- 🐛 Minor bug fixes.
+- 🐛 Fixed minor bugs.
 
 ## v1.2.1 2024-05-25
 
@@ -63,7 +73,7 @@
 - 🔄 Improved retrieval of Bootstrap CSS classes from the project's node_modules.
 - 🛠️ The extension now consistently uses the installed version of Bootstrap, eliminating the ability to switch versions.
 - 🖌️ CSS classes are now accurately suggested within the class attribute.
-- 🐛 Minor bug fixes.
+- 🐛 Fixed minor bugs.
 - 🚀 Development on the project resumes, albeit at a slow pace.
 
 ## v1.1.10 2023-12-08
@@ -92,7 +102,7 @@
 
 ## v1.1.4 2023-08-11
 
-- 🐛 Bug fixes
+- 🐛 Fixed bugs
 
 ## v1.1.3 2023-08-06
 
@@ -104,26 +114,26 @@
 
 ## v1.1.1 2023-06-13
 
-- 🐛 Bug fixes
+- 🐛 Fixed bugs
 
 ## v1.1.0 2023-06-13
 
 - 🆕 Added icon to the Status Bar
-- ⚒️ Refactored the Status Bar
+- ⚒️ Refactoreded the Status Bar
 - 🆕 Added a new command to chnage the Bootstrap version
-- 🐛 Bug fixes
+- 🐛 Fixed bugs
 
 ## v1.0.3 2023-06-11
 
-- Bug fixes
+- Fixed Bugs
 
 ## v1.0.2 2023-06-11
 
-- Bug fixes
+- Fixed Bugs
 
 ## v1.0.1 2023-06-11
 
-- Bug fixes
+- Fixed Bugs
 
 ## v1.0.0 2023-06-11
 
