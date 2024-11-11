@@ -1,5 +1,12 @@
 # Change Log
 
+## v2.0.0 2024-11-06
+- Now your are able use choose manually the version of Bootstrap you are using in your project.
+- You can also disable or enable the extension anytime you want.
+- Fixed minor bugs.
+- All versions from Bootstrap 3 to Bootstrap 5 are supported.
+
+
 ## v1.6.0 2024-11-06
 
 - 🐛 Fixed: Regex now ignores commented code blocks when matching <link> tags for Bootstrap CSS files.
