@@ -48,6 +48,7 @@
     }
   },
   "scripts": {
+    "deploy": "vsce publish",
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
