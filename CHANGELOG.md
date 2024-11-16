@@ -1,11 +1,15 @@
 # Change Log
 
-## v2.0.0 2024-11-06
-- Now your are able use choose manually the version of Bootstrap you are using in your project.
-- You can also disable or enable the extension anytime you want.
-- Fixed minor bugs.
-- All versions from Bootstrap 3 to Bootstrap 5 are supported.
+## v2.0.1 2024-11-16
 
+- Fixed minor bugs
+
+## v2.0.0 2024-11-16
+
+- Added the option to manually select the Bootstrap version for your project.
+- You can now enable or disable the extension anytime.
+- Fixed some bugs.
+- Supports Bootstrap versions 3 to 5.
 
 ## v1.6.0 2024-11-06
 

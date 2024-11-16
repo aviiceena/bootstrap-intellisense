@@ -1,6 +1,7 @@
 {
   "name": "bootstrap-intellisense",
   "displayName": "Bootstrap IntelliSense",
+  "version": "2.0.0",
   "description": "Enhance Bootstrap development with CSS class autocompletion for efficient coding in Visual Studio Code.",
   "categories": [
     "Linters",
@@ -14,12 +15,11 @@
     "autocomplete",
     "vscode"
   ],
-  "version": "2.0.0",
   "license": "MIT",
   "publisher": "hossaini",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hossaini310/bootstrap-intellisense"
+    "url": "https://github.com/aviiceena/bootstrap-intellisense"
   },
   "engines": {
     "vscode": "^1.67.1"
@@ -74,5 +74,9 @@
     "eslint": "^8.57.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.4.5"
+  },
+  "icon": "assets/icons/icon.png",
+  "sponsor": {
+    "url": "https://ko-fi.com/hossaini"
   }
 }
