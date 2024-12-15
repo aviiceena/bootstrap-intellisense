@@ -1,5 +1,9 @@
 # Change Log
 
+## v2.0.2 2024-12-15
+
+- Added .lava support
+
 ## v2.0.1 2024-11-16
 
 - Fixed minor bugs

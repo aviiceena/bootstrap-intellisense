@@ -45,6 +45,7 @@ const languageSupport = [
   'asp',
   'jinja-html',
   'jar',
+  'lava',
 ];
 
 const provideCompletionItems = (
