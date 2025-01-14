@@ -26,7 +26,6 @@ const showMainMenu = async (statusBarItem: vscode.StatusBarItem) => {
     },
     {
       label: '$(sparkle) From local files for offline use',
-      description: 'coming soon',
     },
     {
       label: '',
@@ -58,8 +57,25 @@ const showMainMenu = async (statusBarItem: vscode.StatusBarItem) => {
       case '$(versions) Select Bootstrap version':
         showBootstrapVersionMenu(statusBarItem);
         break;
+      case '$(sparkle) From local files for offline use':
+        const localSetVersion = checkSetting('bootstrap-intelliSense.version');
+        if (localSetVersion) {
+          bootstrapVersion = localSetVersion;
+          bootstrapVersion = Number(localSetVersion.split(' ').pop());
+          setExtensionActive(statusBarItem);
+          vscode.window.showInformationMessage(`Bootstrap version set to v${bootstrapVersion}`);
+        } else {
+          vscode.window.showInformationMessage('No local version of Bootstrap found in Workspace settings.json');
+        }
+        break;
     }
   }
+};
+
+const checkSetting = (settingKey: string): any => {
+  const configuration = vscode.workspace.getConfiguration();
+  const settingValue = configuration.get(settingKey);
+  return settingValue;
 };
 
 const setExtensionActive = (statusBarItem: vscode.StatusBarItem) => {
