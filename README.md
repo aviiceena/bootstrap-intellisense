@@ -19,7 +19,7 @@ The extension will be activated automatically when it's installed.
 ### Smart Autocomplete
 
 Intelligent suggestions for Bootstrap class names.
-Enter a class name and the extension will suggest matching CSS classes, if not than try `ctrl + space` to trigger the autocomplete.
+Enter a class name and the extension will suggest matching CSS classes, if not then try `ctrl + space` to trigger the autocomplete.
 
 <img src="/assets/images/autocomplete.png"/>
 
