@@ -46,6 +46,8 @@ const languageSupport = [
   'jinja-html',
   'jar',
   'lava',
+  'glimmer-js',
+  'glimmer-ts',
 ];
 
 const provideCompletionItems = (
