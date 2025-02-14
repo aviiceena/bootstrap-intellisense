@@ -1,5 +1,9 @@
 # Change Log
 
+## v2.0.3 2025-02-13
+
+- Added .gjs and .gts support
+
 ## v2.0.2 2024-12-15
 
 - Added .lava support
