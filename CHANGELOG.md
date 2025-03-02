@@ -1,5 +1,9 @@
 # Change Log
 
+## v2.1.1 2025-03-02
+
+- Fixed minor bugs.
+
 ## v2.1.0 2025-03-02
 
 - Added support for .gjs and .gts files.
