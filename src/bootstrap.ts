@@ -38,7 +38,7 @@ const extractCssClasses = (css: string): CssClass[] => {
   }
 };
 
-const fetchBootstrapCss = async (version: Number) => {
+const fetchBootstrapCss = async (version: string) => {
   try {
     const response = await fetch(`https://cdn.jsdelivr.net/npm/bootstrap@${version}/dist/css/bootstrap.css`);
     return await response.text();

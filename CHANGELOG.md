@@ -1,5 +1,11 @@
 # Change Log
 
+## v2.1.0 2025-03-02
+
+- Added support for .gjs and .gts files.
+- The extension now remembers the selected Bootstrap version and its enabled/disabled state.
+- Fixed minor bugs.
+
 ## v2.0.2 2024-12-15
 
 - Added .lava support

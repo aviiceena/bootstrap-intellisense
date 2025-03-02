@@ -1,18 +1,59 @@
 import * as vscode from 'vscode';
 
-let isExtensionActive = false;
-let bootstrapVersion: Number;
+let isExtensionActive: boolean = false;
+let bootstrapVersion: string = '0';
 
 type StatusCallback = (isActive: boolean) => void;
 const statusCallbacks: StatusCallback[] = [];
+
+const loadSettings = () => {
+  try {
+    const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+    const bootstrapConfig: { enable: boolean; bsVersion: string } | undefined = config.get('bootstrapIntelliSense');
+
+    if (bootstrapConfig) {
+      isExtensionActive = bootstrapConfig.enable || false;
+      bootstrapVersion = bootstrapConfig.bsVersion || '0';
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+};
+
+const saveSettings = async () => {
+  try {
+    const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+
+    let bootstrapSettings: { enable: boolean; bsVersion: string } = config.get('bootstrapIntelliSense', {
+      enable: false,
+      bsVersion: '0',
+    });
+
+    if (bootstrapSettings.enable === true && bootstrapSettings.bsVersion === '0') {
+      bootstrapSettings.bsVersion = '5.3.0';
+      bootstrapVersion = '5.3.0';
+    }
+
+    bootstrapSettings = { enable: isExtensionActive, bsVersion: bootstrapVersion };
+
+    await config.update('bootstrapIntelliSense', bootstrapSettings, vscode.ConfigurationTarget.Global);
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    vscode.window.showErrorMessage('Failed to save Bootstrap IntelliSense settings');
+  }
+};
 
 const subscribeToExtensionStatus = (callback: StatusCallback) => {
   statusCallbacks.push(callback);
 };
 
 const createStatusBarItem = (): vscode.StatusBarItem => {
-  const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  item.text = `${isExtensionActive ? '$(bootstrap-icon-enable)' : '$(bootstrap-icon-disable)'} Bootstrap IntelliSense`;
+  loadSettings();
+
+  const item: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  item.text = `${isExtensionActive ? '$(bootstrap-icon-enable)' : '$(bootstrap-icon-disable)'} ${
+    bootstrapVersion !== '0' ? `Bootstrap v${bootstrapVersion}` : 'Bootstrap IntelliSense'
+  }`;
   item.tooltip = 'Click to show the main menu';
   item.command = 'bootstrap-intelliSense.showMainMenu';
   item.show();
@@ -41,7 +82,7 @@ const showMainMenu = async (statusBarItem: vscode.StatusBarItem) => {
     },
   ];
 
-  const mainSelection = await vscode.window.showQuickPick(mainOptions, {
+  const mainSelection: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(mainOptions, {
     title: 'Bootstrap IntelliSense Menu',
     placeHolder: 'Choose an option',
   });
@@ -53,26 +94,29 @@ const showMainMenu = async (statusBarItem: vscode.StatusBarItem) => {
           ? '$(bootstrap-icon-disable) Disable completion'
           : '$(bootstrap-icon-enable) Enable completion'
       }`:
-        toggleExtensionStatus(statusBarItem);
+        await toggleExtensionStatus(statusBarItem);
         break;
       case '$(versions) Select Bootstrap version':
-        showBootstrapVersionMenu(statusBarItem);
+        await showBootstrapVersionMenu(statusBarItem);
         break;
     }
   }
 };
 
-const setExtensionActive = (statusBarItem: vscode.StatusBarItem) => {
+const setExtensionActive = async (statusBarItem: vscode.StatusBarItem) => {
   isExtensionActive = true;
   statusBarItem.text = `$(bootstrap-icon-enable) Bootstrap v${bootstrapVersion}`;
   statusCallbacks.forEach((callback) => callback(isExtensionActive));
+
+  await saveSettings();
 };
 
-const toggleExtensionStatus = (statusBarItem: vscode.StatusBarItem) => {
+const toggleExtensionStatus = async (statusBarItem: vscode.StatusBarItem) => {
   isExtensionActive = !isExtensionActive;
+  await saveSettings();
   statusCallbacks.forEach((callback) => callback(isExtensionActive));
 
-  const status = isExtensionActive ? 'enabled' : 'disabled';
+  const status: string = isExtensionActive ? 'enabled' : 'disabled';
   vscode.window.showInformationMessage(`Bootstrap IntelliSense is ${status}`);
   statusBarItem.text = isExtensionActive
     ? `$(bootstrap-icon-enable) ${bootstrapVersion ? `Bootstrap v${bootstrapVersion}` : 'Bootstrap IntelliSense'}`
@@ -98,17 +142,17 @@ const showBootstrapVersionMenu = async (statusBarItem: vscode.StatusBarItem) => 
 
   if (majorSelection) {
     if (majorSelection.label === '$(arrow-left) Back') {
-      vscode.commands.executeCommand('bootstrap-intellisense.showMainMenu');
+      showMainMenu(statusBarItem);
     } else {
       switch (majorSelection.label) {
         case '$(versions) Bootstrap 5':
-          showBootstrap5VersionMenu(statusBarItem);
+          await showBootstrap5VersionMenu(statusBarItem);
           break;
         case '$(versions) Bootstrap 4':
-          showBootstrap4VersionMenu(statusBarItem);
+          await showBootstrap4VersionMenu(statusBarItem);
           break;
         case '$(versions) Bootstrap 3':
-          showBootstrap3VersionMenu(statusBarItem);
+          await showBootstrap3VersionMenu(statusBarItem);
           break;
       }
     }
@@ -135,10 +179,11 @@ const showBootstrap5VersionMenu = async (statusBarItem: vscode.StatusBarItem) =>
 
   if (versionSelection) {
     if (versionSelection.label === '$(arrow-left) Back') {
-      showBootstrapVersionMenu(statusBarItem);
+      await showBootstrapVersionMenu(statusBarItem);
     } else {
-      bootstrapVersion = Number(versionSelection.label.split(' ').pop());
-      setExtensionActive(statusBarItem);
+      const versionNumber: string | undefined = versionSelection.label.split(' ').pop();
+      bootstrapVersion = versionNumber + '.0';
+      await setExtensionActive(statusBarItem);
       vscode.window.showInformationMessage(`Bootstrap version set to v${bootstrapVersion}`);
     }
   }
@@ -167,10 +212,11 @@ const showBootstrap4VersionMenu = async (statusBarItem: vscode.StatusBarItem) =>
 
   if (versionSelection) {
     if (versionSelection.label === '$(arrow-left) Back') {
-      showBootstrapVersionMenu(statusBarItem);
+      await showBootstrapVersionMenu(statusBarItem);
     } else {
-      bootstrapVersion = Number(versionSelection.label.split(' ').pop());
-      setExtensionActive(statusBarItem);
+      const versionNumber: string | undefined = versionSelection.label.split(' ').pop();
+      bootstrapVersion = versionNumber + '.0';
+      await setExtensionActive(statusBarItem);
       vscode.window.showInformationMessage(`Bootstrap version set to v${bootstrapVersion}`);
     }
   }
@@ -194,20 +240,14 @@ const showBootstrap3VersionMenu = async (statusBarItem: vscode.StatusBarItem) =>
 
   if (versionSelection) {
     if (versionSelection.label === '$(arrow-left) Back') {
-      showBootstrapVersionMenu(statusBarItem);
+      await showBootstrapVersionMenu(statusBarItem);
     } else {
-      bootstrapVersion = Number(versionSelection.label.split(' ').pop());
-      setExtensionActive(statusBarItem);
+      const versionNumber: string | undefined = versionSelection.label.split(' ').pop();
+      bootstrapVersion = versionNumber + '.0';
+      await setExtensionActive(statusBarItem);
       vscode.window.showInformationMessage(`Bootstrap version set to v${bootstrapVersion}`);
     }
   }
 };
 
-export {
-  createStatusBarItem,
-  showMainMenu,
-  toggleExtensionStatus,
-  subscribeToExtensionStatus,
-  bootstrapVersion,
-  isExtensionActive,
-};
+export { createStatusBarItem, showMainMenu, subscribeToExtensionStatus, bootstrapVersion, isExtensionActive };
