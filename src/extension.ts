@@ -1,11 +1,5 @@
 import * as vscode from 'vscode';
-import {
-  createStatusBarItem,
-  showMainMenu,
-  isExtensionActive,
-  subscribeToExtensionStatus,
-  bootstrapVersion,
-} from './statusBar';
+import { createStatusBarItem, showMainMenu, isExtensionActive, subscribeToExtensionStatus } from './statusBar';
 import { getClasses } from './bootstrap';
 
 let statusBarItem: vscode.StatusBarItem;
@@ -46,6 +40,8 @@ const languageSupport = [
   'jinja-html',
   'jar',
   'lava',
+  'glimmer-js',
+  'glimmer-ts',
 ];
 
 const provideCompletionItems = (
@@ -54,10 +50,7 @@ const provideCompletionItems = (
 ): Promise<vscode.CompletionItem[]> | undefined => {
   const classRegex = /class(?:Name)?\s*=\s*['"]([^'"]*)$/;
 
-  if (isExtensionActive && !bootstrapVersion) {
-    vscode.window.showInformationMessage('Please select a version of Bootstrap');
-    return Promise.resolve([]);
-  } else if (isExtensionActive) {
+  if (isExtensionActive) {
     {
       return new Promise(async (resolve, reject) => {
         try {
@@ -115,13 +108,17 @@ function registerCompletionProvider(context: vscode.ExtensionContext) {
   }
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   statusBarItem = createStatusBarItem();
   context.subscriptions.push(statusBarItem);
 
-  let mainMenuCommand = vscode.commands.registerCommand('bootstrap-intelliSense.showMainMenu', async () => {
-    await showMainMenu(statusBarItem);
-  });
+  let mainMenuCommand: vscode.Disposable = vscode.commands.registerCommand(
+    'bootstrap-intelliSense.showMainMenu',
+    async () => {
+      await showMainMenu(statusBarItem);
+    },
+  );
+
   context.subscriptions.push(mainMenuCommand);
 
   registerCompletionProvider(context);
