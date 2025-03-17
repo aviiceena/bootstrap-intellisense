@@ -2,11 +2,13 @@ import * as vscode from 'vscode';
 import { StatusBar } from './features/statusBar/statusBar';
 import { Menu } from './features/menu/menu';
 import { CompletionProvider } from './features/completion/completionProvider';
+import { HoverProvider } from './features/hover/hoverProvider';
 import { Logger, LogLevel } from './core/logger';
 import { Container } from './core/container';
 import { Config } from './core/config';
 
 let completionProvider: CompletionProvider | undefined;
+let hoverProvider: HoverProvider | undefined;
 const container = Container.getInstance();
 const logger = Logger.getInstance();
 const config = Config.getInstance();
@@ -40,17 +42,23 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     container.register('completionProvider', completionProvider);
 
+    // Create and register hover provider
+    hoverProvider = new HoverProvider(bootstrapConfig.isActive, bootstrapConfig.version);
+    container.register('hoverProvider', hoverProvider);
+
     // Only register if active
     if (bootstrapConfig.isActive) {
       completionProvider.register(context);
-      logger.log(LogLevel.INFO, 'Completion provider registered successfully');
+      hoverProvider.register(context);
+      logger.log(LogLevel.INFO, 'Providers registered successfully');
     }
 
     // Subscribe to status changes
     statusBar.subscribe((isActive) => {
       try {
-        if (completionProvider) {
+        if (completionProvider && hoverProvider) {
           completionProvider.dispose();
+          hoverProvider.dispose();
 
           if (isActive) {
             const currentConfig = config.getBootstrapConfig();
@@ -60,9 +68,14 @@ export async function activate(context: vscode.ExtensionContext) {
               currentConfig.showSuggestions,
               currentConfig.autoComplete,
             );
+            hoverProvider = new HoverProvider(true, currentConfig.version);
+
             container.register('completionProvider', completionProvider);
+            container.register('hoverProvider', hoverProvider);
+
             completionProvider.register(context);
-            logger.log(LogLevel.INFO, 'Completion provider updated successfully');
+            hoverProvider.register(context);
+            logger.log(LogLevel.INFO, 'Providers updated successfully');
           }
         }
       } catch (error) {
@@ -125,6 +138,10 @@ export function deactivate() {
   if (completionProvider) {
     completionProvider.dispose();
     completionProvider = undefined;
+  }
+  if (hoverProvider) {
+    hoverProvider.dispose();
+    hoverProvider = undefined;
   }
   logger.dispose();
   container.clear();
