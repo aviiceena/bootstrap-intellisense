@@ -35,19 +35,31 @@
         "bootstrapIntelliSense": {
           "type": "object",
           "default": {
-            "enable": false,
-            "bsVersion": "0"
+            "enable": true,
+            "bsVersion": "5.3.3",
+            "showSuggestions": true,
+            "autoComplete": true
           },
           "properties": {
             "enable": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "description": "Enable or disable Bootstrap IntelliSense"
             },
             "bsVersion": {
               "type": "string",
-              "default": "0",
+              "default": "5.3.3",
               "description": "Selected Bootstrap version"
+            },
+            "showSuggestions": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show Bootstrap class suggestions while typing"
+            },
+            "autoComplete": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically insert the selected class"
             }
           },
           "description": "Bootstrap IntelliSense configuration"
