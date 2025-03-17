@@ -139,6 +139,26 @@ export class CompletionProvider {
     }
   }
 
+  private getClassCategory(className: string): string {
+    // Layout-Klassen
+    if (/^(container|row|col|grid|flex|d-|order-|offset-|g-)/.test(className)) {
+      return '1-layout';
+    }
+
+    // Komponenten
+    if (/^(btn|card|nav|navbar|modal|form|input|dropdown|alert|badge|list|table)/.test(className)) {
+      return '2-components';
+    }
+
+    // Utilities
+    if (/^(m-|p-|text-|bg-|border|rounded|shadow|w-|h-|position-|float-|align|justify)/.test(className)) {
+      return '3-utilities';
+    }
+
+    // Sonstiges
+    return '4-other';
+  }
+
   private async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -179,10 +199,10 @@ export class CompletionProvider {
         .filter(({ className }) => !usedClasses.includes(className))
         .map(({ className, classProperties }) => {
           const item = new vscode.CompletionItem(className, vscode.CompletionItemKind.Value);
-          item.detail = 'Bootstrap IntelliSense';
+          item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
           item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
           item.insertText = this.autoComplete ? className : '';
-          item.sortText = '0' + className;
+          item.sortText = `${this.getClassCategory(className)}-${className}`;
           return item;
         });
     } catch (error) {
