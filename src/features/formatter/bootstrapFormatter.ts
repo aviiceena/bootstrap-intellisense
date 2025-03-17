@@ -20,12 +20,12 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
   }
 
   private getClassCategory(className: string): string {
-    // Layout-Klassen
+    // Layout Classes
     if (/^(container|row|col|grid|flex|d-|order-|offset-|g-)/.test(className)) {
       return '1-layout';
     }
 
-    // Komponenten
+    // Components
     if (/^(btn|card|nav|navbar|modal|form|input|dropdown|alert|badge|list|table)/.test(className)) {
       return '2-components';
     }
@@ -35,7 +35,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
       return '3-utilities';
     }
 
-    // Sonstiges
+    // Other
     return '4-other';
   }
 
@@ -58,12 +58,12 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     const edits: vscode.TextEdit[] = [];
 
     try {
-      // Prüfe, ob die Erweiterung aktiv ist
+      // Check if the extension is active
       if (!this.isActive) {
         return edits;
       }
 
-      // Prüfe, ob die Formatierung aktiviert ist
+      // check if the formatter is enabled
       const bootstrapConfig = this.config.getBootstrapConfig();
       if (!bootstrapConfig.formatOnSave) {
         return edits;
@@ -73,7 +73,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
         const line = document.lineAt(i);
         const text = line.text;
 
-        // Suche nach class-Attributen
+        // search for class attributes
         const classRegex = /class(?:Name)?=["']([^"']*)["']/g;
         let match;
 
@@ -87,7 +87,6 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
             const endPos = new vscode.Position(i, match.index + fullMatch.length);
             const range = new vscode.Range(startPos, endPos);
 
-            // Erstelle das neue class-Attribut mit sortierten Klassen
             const quote = fullMatch.includes('"') ? '"' : "'";
             const newText = `class=${quote}${sortedClasses}${quote}`;
 

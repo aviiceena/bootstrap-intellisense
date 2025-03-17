@@ -90,7 +90,7 @@ export class Menu {
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
       },
-      { label: '$(add) Bootstrap 5.3' },
+      { label: '$(add) Bootstrap 5.3.3' },
       { label: '$(add) Bootstrap 5.2' },
       { label: '$(add) Bootstrap 5.1' },
       { label: '$(add) Bootstrap 5.0' },
