@@ -1,16 +1,12 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
-import { Logger, LogLevel } from '../../core/logger';
 import { languageSupport } from '../completion/completionProvider';
 
 export class HoverProvider {
   private provider: vscode.Disposable | undefined;
   private cachedClasses: { className: string; classProperties: string }[] | undefined;
-  private logger: Logger;
 
-  constructor(private isActive: boolean, private bootstrapVersion: string) {
-    this.logger = Logger.getInstance();
-  }
+  constructor(private isActive: boolean, private bootstrapVersion: string) {}
 
   public register(context: vscode.ExtensionContext): vscode.Disposable | undefined {
     this.dispose();
@@ -66,7 +62,6 @@ export class HoverProvider {
 
       return new vscode.Hover(content, range);
     } catch (error) {
-      this.logger.log(LogLevel.ERROR, 'Error in provideHover', error as Error);
       return undefined;
     }
   }

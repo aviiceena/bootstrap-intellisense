@@ -1,15 +1,12 @@
 import * as vscode from 'vscode';
-import { Logger, LogLevel } from '../../core/logger';
 
 export class StatusBar {
   private item: vscode.StatusBarItem;
   private isActive: boolean = false;
   private bootstrapVersion: string = '0';
   private callbacks: ((isActive: boolean) => void)[] = [];
-  private logger: Logger;
 
   constructor() {
-    this.logger = Logger.getInstance();
     this.loadSettings();
     this.item = this.createStatusBarItem();
   }
@@ -21,15 +18,9 @@ export class StatusBar {
 
       this.isActive = bootstrapConfig?.enable ?? true;
       this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.3';
-
-      this.logger.log(LogLevel.INFO, 'StatusBar settings loaded', {
-        isActive: this.isActive,
-        version: this.bootstrapVersion,
-      });
     } catch (error) {
       this.isActive = true;
       this.bootstrapVersion = '5.3.3';
-      this.logger.log(LogLevel.WARNING, 'Error loading StatusBar settings, using default values', error as Error);
     }
   }
 
@@ -41,9 +32,7 @@ export class StatusBar {
         bsVersion: this.bootstrapVersion,
       };
       await config.update('bootstrapIntelliSense', settings, vscode.ConfigurationTarget.Global);
-      this.logger.log(LogLevel.INFO, 'StatusBar settings saved', settings);
     } catch (error) {
-      this.logger.log(LogLevel.ERROR, 'Error saving StatusBar settings', error as Error);
       vscode.window.showErrorMessage('Error saving Bootstrap IntelliSense settings');
     }
   }
@@ -92,11 +81,9 @@ export class StatusBar {
       this.updateStatusBarText();
 
       const statusChange = this.isActive ? 'activated' : 'deactivated';
-      this.logger.log(LogLevel.INFO, `Bootstrap IntelliSense has been ${statusChange}`);
       vscode.window.showInformationMessage(`Bootstrap IntelliSense has been ${statusChange}`);
     } catch (error) {
       this.isActive = oldStatus;
-      this.logger.log(LogLevel.ERROR, 'Error toggling status', error as Error);
       vscode.window.showErrorMessage('Error toggling Bootstrap IntelliSense status');
     }
   }
@@ -112,18 +99,11 @@ export class StatusBar {
       this.updateStatusBarText();
       this.callbacks.forEach((callback) => callback(this.isActive));
 
-      this.logger.log(LogLevel.INFO, 'Bootstrap version updated', {
-        oldVersion,
-        newVersion: version,
-      });
-
       if (wasInactive) {
-        this.logger.log(LogLevel.INFO, 'Bootstrap IntelliSense has been activated');
         vscode.window.showInformationMessage('Bootstrap IntelliSense has been activated');
       }
     } catch (error) {
       this.bootstrapVersion = oldVersion;
-      this.logger.log(LogLevel.ERROR, 'Error updating Bootstrap version', error as Error);
       vscode.window.showErrorMessage('Error updating Bootstrap version');
     }
   }
@@ -134,7 +114,6 @@ export class StatusBar {
   }
 
   public dispose() {
-    this.logger.log(LogLevel.INFO, 'StatusBar being removed');
     this.item.dispose();
   }
 }

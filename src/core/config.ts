@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Logger, LogLevel } from './logger';
 
 export interface BootstrapConfig {
   version: string;
@@ -12,11 +11,9 @@ export interface BootstrapConfig {
 export class Config {
   private static instance: Config;
   private config: vscode.WorkspaceConfiguration;
-  private logger: Logger;
 
   private constructor() {
     this.config = vscode.workspace.getConfiguration('bootstrapIntelliSense');
-    this.logger = Logger.getInstance();
   }
 
   public static getInstance(): Config {
@@ -35,7 +32,6 @@ export class Config {
       formatOnSave: this.config.get<boolean>('formatOnSave', true),
     };
 
-    this.logger.log(LogLevel.DEBUG, 'Bootstrap configuration loaded', config);
     return config;
   }
 
@@ -43,9 +39,7 @@ export class Config {
     try {
       const configKey = this.getConfigKey(key);
       await this.config.update(configKey, value, true);
-      this.logger.log(LogLevel.INFO, `Configuration updated: ${configKey} = ${value}`);
     } catch (error) {
-      this.logger.log(LogLevel.ERROR, `Error updating configuration: ${key}`, error as Error);
       throw error;
     }
   }
