@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { Logger, LogLevel } from '../../core/logger';
 
-const languageSupport = [
+export const languageSupport = [
   // HTML und Template-Sprachen
   'html',
   'php',
