@@ -3,41 +3,53 @@ import { getClasses } from '../../core/bootstrap';
 import { Logger, LogLevel } from '../../core/logger';
 
 const languageSupport = [
+  // HTML und Template-Sprachen
   'html',
   'php',
   'handlebars',
+  'vue-html',
+  'django-html',
+  'blade',
+  'twig',
+  'erb',
+  'ejs',
+  'nunjucks',
+  'mustache',
+  'liquid',
+  'pug',
+  'jade',
+  'haml',
+  'slim',
+
+  // JavaScript/TypeScript
   'javascript',
   'javascriptreact',
   'typescript',
   'typescriptreact',
+
+  // Framework-spezifisch
   'vue',
-  'vue-html',
   'svelte',
   'astro',
-  'twig',
-  'erb',
-  'django-html',
-  'blade',
   'razor',
-  'ejs',
-  'markdown',
+  'cshtml',
+  'aspnetcorerazor',
+
+  // Stylesheet-Sprachen
   'css',
   'scss',
   'sass',
   'less',
   'stylus',
-  'jade',
-  'pug',
-  'haml',
-  'slim',
-  'liquid',
-  'edge',
+
+  // Template-Engines
   'jinja',
-  'j2',
-  'asp',
+  'jinja2',
   'jinja-html',
-  'jar',
-  'lava',
+  'edge',
+  'markdown',
+
+  // Web Components
   'glimmer-js',
   'glimmer-ts',
 ];
