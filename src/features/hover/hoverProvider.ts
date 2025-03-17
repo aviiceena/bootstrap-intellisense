@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { Logger, LogLevel } from '../../core/logger';
+import { languageSupport } from '../completion/completionProvider';
 
 export class HoverProvider {
   private provider: vscode.Disposable | undefined;
@@ -18,33 +19,11 @@ export class HoverProvider {
       return undefined;
     }
 
-    this.provider = vscode.languages.registerHoverProvider(
-      [
-        'html',
-        'php',
-        'handlebars',
-        'javascript',
-        'javascriptreact',
-        'typescript',
-        'typescriptreact',
-        'vue',
-        'vue-html',
-        'svelte',
-        'astro',
-        'twig',
-        'erb',
-        'django-html',
-        'blade',
-        'razor',
-        'ejs',
-        'markdown',
-      ],
-      {
-        provideHover: async (document, position, token) => {
-          return await this.provideHover(document, position);
-        },
+    this.provider = vscode.languages.registerHoverProvider(languageSupport, {
+      provideHover: async (document, position, token) => {
+        return await this.provideHover(document, position);
       },
-    );
+    });
 
     return this.provider;
   }
