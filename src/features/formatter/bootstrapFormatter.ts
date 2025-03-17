@@ -1,14 +1,22 @@
 import * as vscode from 'vscode';
-import { Logger, LogLevel } from '../../core/logger';
 import { Config } from '../../core/config';
 
 export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider {
-  private logger: Logger;
   private config: Config;
+  private isActive: boolean = false;
 
   constructor() {
-    this.logger = Logger.getInstance();
     this.config = Config.getInstance();
+    this.loadSettings();
+  }
+
+  private loadSettings() {
+    const config = vscode.workspace.getConfiguration();
+    this.isActive = config.get('bootstrapIntelliSense.enable', false);
+  }
+
+  public updateConfig(isActive: boolean) {
+    this.isActive = isActive;
   }
 
   private getClassCategory(className: string): string {
@@ -50,6 +58,11 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     const edits: vscode.TextEdit[] = [];
 
     try {
+      // Prüfe, ob die Erweiterung aktiv ist
+      if (!this.isActive) {
+        return edits;
+      }
+
       // Prüfe, ob die Formatierung aktiviert ist
       const bootstrapConfig = this.config.getBootstrapConfig();
       if (!bootstrapConfig.formatOnSave) {
@@ -82,9 +95,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
           }
         }
       }
-    } catch (error) {
-      this.logger.log(LogLevel.ERROR, 'Error formatting Bootstrap classes', error as Error);
-    }
+    } catch (error) {}
 
     return edits;
   }
