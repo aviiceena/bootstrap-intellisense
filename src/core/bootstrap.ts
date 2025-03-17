@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import * as https from 'https';
 
 interface CssClass {
@@ -50,7 +49,6 @@ const fetchBootstrapCss = async (version: string): Promise<string> => {
 
       const contentType = res.headers['content-type'];
       if (!contentType || !contentType.includes('text/css')) {
-        const error = `Invalid content type: ${contentType}`;
         reject(new Error('Invalid content type'));
         return;
       }

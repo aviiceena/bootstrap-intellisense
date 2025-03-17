@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 
 export const languageSupport = [
-  // HTML und Template-Sprachen
+  // HTML and templating languages
   'html',
   'php',
   'handlebars',
@@ -19,6 +19,11 @@ export const languageSupport = [
   'jade',
   'haml',
   'slim',
+  'jinja',
+  'jinja2',
+  'jinja-html',
+  'edge',
+  'markdown',
 
   // JavaScript/TypeScript
   'javascript',
@@ -26,7 +31,8 @@ export const languageSupport = [
   'typescript',
   'typescriptreact',
 
-  // Framework-spezifisch
+  // Framework-specific languages
+  'angular',
   'vue',
   'svelte',
   'astro',
@@ -34,19 +40,12 @@ export const languageSupport = [
   'cshtml',
   'aspnetcorerazor',
 
-  // Stylesheet-Sprachen
+  // Stylesheet-languages
   'css',
   'scss',
   'sass',
   'less',
   'stylus',
-
-  // Template-Engines
-  'jinja',
-  'jinja2',
-  'jinja-html',
-  'edge',
-  'markdown',
 
   // Web Components
   'glimmer-js',

@@ -13,7 +13,7 @@ let formatter: BootstrapFormatter | undefined;
 const container = Container.getInstance();
 const config = Config.getInstance();
 
-// Hilfsfunktionen
+// helper function to apply formatting to the document
 async function applyFormatting(document: vscode.TextDocument, formatter: BootstrapFormatter) {
   const edits = formatter.provideDocumentFormattingEdits(document);
   if (edits.length > 0) {

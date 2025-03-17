@@ -41,7 +41,7 @@ export class HoverProvider {
       const line = document.lineAt(position.line);
       const lineText = line.text;
 
-      // Prüfen, ob wir uns in einem class-Attribut befinden
+      // check if the cursor is within a class attribute
       if (!this.isWithinClassAttribute(lineText, position.character)) {
         return undefined;
       }
