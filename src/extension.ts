@@ -73,9 +73,21 @@ export async function activate(context: vscode.ExtensionContext) {
       // Register formatter for supported languages
       const formatterDisposable = vscode.languages.registerDocumentFormattingEditProvider(languageSupport, formatter);
 
-      const formatOnSaveDisposable = vscode.workspace.onWillSaveTextDocument((event) => {
+      const formatOnSaveDisposable = vscode.workspace.onWillSaveTextDocument(async (event) => {
         if (languageSupport.includes(event.document.languageId)) {
-          event.waitUntil(Promise.resolve(formatter?.provideDocumentFormattingEdits(event.document) || []));
+          const bootstrapConfig = config.getBootstrapConfig();
+          if (bootstrapConfig.formatOnSave && formatter) {
+            // Prüfe, ob es sich um einen manuellen Speichervorgang handelt
+            const isManualSave = event.reason === vscode.TextDocumentSaveReason.Manual;
+            if (isManualSave) {
+              const edits = formatter.provideDocumentFormattingEdits(event.document);
+              if (edits.length > 0) {
+                const edit = new vscode.WorkspaceEdit();
+                edits.forEach((e) => edit.replace(event.document.uri, e.range, e.newText));
+                await vscode.workspace.applyEdit(edit);
+              }
+            }
+          }
         }
       });
 
