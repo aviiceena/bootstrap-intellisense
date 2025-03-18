@@ -55,13 +55,20 @@ export const languageSupport = [
 export class CompletionProvider {
   private provider: vscode.Disposable | undefined;
   private cachedClasses: { className: string; classProperties: string }[] | undefined;
+  private useLocalFile: boolean = false;
+  private cssFilePath: string = '';
 
   constructor(
     private isActive: boolean,
     private bootstrapVersion: string,
     private showSuggestions: boolean = true,
     private autoComplete: boolean = true,
-  ) {}
+    useLocalFile: boolean = false,
+    cssFilePath: string = '',
+  ) {
+    this.useLocalFile = useLocalFile;
+    this.cssFilePath = cssFilePath;
+  }
 
   public register(context: vscode.ExtensionContext): vscode.Disposable | undefined {
     this.dispose();
@@ -152,7 +159,7 @@ export class CompletionProvider {
 
     try {
       if (!this.cachedClasses && this.isActive) {
-        this.cachedClasses = await getClasses(this.bootstrapVersion);
+        this.cachedClasses = await getClasses(this.bootstrapVersion, this.useLocalFile, this.cssFilePath);
       }
 
       if (!this.cachedClasses) {
@@ -181,6 +188,14 @@ export class CompletionProvider {
 
   public updateVersion(version: string) {
     this.bootstrapVersion = version;
+    this.useLocalFile = false;
+    this.cssFilePath = '';
+    this.cachedClasses = undefined;
+  }
+
+  public updateLocalFile(cssFilePath: string) {
+    this.useLocalFile = true;
+    this.cssFilePath = cssFilePath;
     this.cachedClasses = undefined;
   }
 
@@ -188,5 +203,7 @@ export class CompletionProvider {
     this.isActive = isActive;
     this.showSuggestions = showSuggestions;
     this.autoComplete = autoComplete;
+    // Reset cache to ensure fresh class suggestions
+    this.cachedClasses = undefined;
   }
 }

@@ -34,33 +34,6 @@ function createFormatOnSaveHandler(formatter: BootstrapFormatter, config: Config
   };
 }
 
-function createAndRegisterProviders(context: vscode.ExtensionContext, isActive: boolean, bootstrapConfig: any) {
-  if (completionProvider) {
-    completionProvider.dispose();
-  }
-  if (hoverProvider) {
-    hoverProvider.dispose();
-  }
-
-  if (!isActive) {
-    return;
-  }
-
-  completionProvider = new CompletionProvider(
-    true,
-    bootstrapConfig.version,
-    bootstrapConfig.showSuggestions,
-    bootstrapConfig.autoComplete,
-  );
-  hoverProvider = new HoverProvider(true, bootstrapConfig.version);
-
-  container.register('completionProvider', completionProvider);
-  container.register('hoverProvider', hoverProvider);
-
-  completionProvider.register(context);
-  hoverProvider.register(context);
-}
-
 function registerFormatter(context: vscode.ExtensionContext, formatter: BootstrapFormatter, config: Config) {
   const formatterDisposable = vscode.languages.registerDocumentFormattingEditProvider(languageSupport, formatter);
   const formatOnSaveDisposable = vscode.workspace.onWillSaveTextDocument(createFormatOnSaveHandler(formatter, config));
@@ -85,15 +58,57 @@ export async function activate(context: vscode.ExtensionContext) {
     container.register('formatter', formatter);
 
     if (bootstrapConfig.isActive) {
-      createAndRegisterProviders(context, true, bootstrapConfig);
+      // Initialize providers with current configuration
+      completionProvider = new CompletionProvider(
+        bootstrapConfig.isActive,
+        bootstrapConfig.version,
+        bootstrapConfig.showSuggestions,
+        bootstrapConfig.autoComplete,
+        bootstrapConfig.useLocalFile,
+        bootstrapConfig.cssFilePath,
+      );
+
+      hoverProvider = new HoverProvider(bootstrapConfig.isActive, bootstrapConfig.version);
+
+      container.register('completionProvider', completionProvider);
+      container.register('hoverProvider', hoverProvider);
+
+      completionProvider.register(context);
+      hoverProvider.register(context);
+
       registerFormatter(context, formatter, config);
     }
 
     // Subscribe to status changes
-    statusBar.subscribe((isActive) => {
+    statusBar.subscribe((isActive, useLocalFile, cssFilePath, version) => {
       try {
-        const currentConfig = config.getBootstrapConfig();
-        createAndRegisterProviders(context, isActive, currentConfig);
+        // Explicitly update CompletionProvider with current configuration
+        if (completionProvider) {
+          completionProvider.dispose();
+          completionProvider = undefined;
+        }
+
+        if (isActive) {
+          completionProvider = new CompletionProvider(
+            isActive,
+            version,
+            config.get<boolean>('showSuggestions') ?? true,
+            config.get<boolean>('autoComplete') ?? true,
+            useLocalFile,
+            cssFilePath,
+          );
+
+          container.register('completionProvider', completionProvider);
+          completionProvider.register(context);
+
+          if (hoverProvider) {
+            hoverProvider.dispose();
+          }
+          hoverProvider = new HoverProvider(isActive, version);
+          container.register('hoverProvider', hoverProvider);
+          hoverProvider.register(context);
+        }
+
         if (formatter) {
           formatter.updateConfig(isActive);
           if (isActive) {
@@ -115,7 +130,34 @@ export async function activate(context: vscode.ExtensionContext) {
         if (e.affectsConfiguration('bootstrapIntelliSense')) {
           try {
             const newConfig = config.getBootstrapConfig();
-            createAndRegisterProviders(context, newConfig.isActive, newConfig);
+
+            // Recreate providers with the new configuration
+            if (completionProvider) {
+              completionProvider.dispose();
+              completionProvider = undefined;
+            }
+
+            if (newConfig.isActive) {
+              completionProvider = new CompletionProvider(
+                newConfig.isActive,
+                newConfig.version,
+                newConfig.showSuggestions,
+                newConfig.autoComplete,
+                newConfig.useLocalFile,
+                newConfig.cssFilePath,
+              );
+
+              container.register('completionProvider', completionProvider);
+              completionProvider.register(context);
+
+              if (hoverProvider) {
+                hoverProvider.dispose();
+              }
+              hoverProvider = new HoverProvider(newConfig.isActive, newConfig.version);
+              container.register('hoverProvider', hoverProvider);
+              hoverProvider.register(context);
+            }
+
             if (formatter) {
               formatter.updateConfig(newConfig.isActive);
             }

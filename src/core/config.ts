@@ -6,6 +6,8 @@ export interface BootstrapConfig {
   showSuggestions: boolean;
   autoComplete: boolean;
   formatOnSave: boolean;
+  useLocalFile?: boolean;
+  cssFilePath?: string;
 }
 
 export class Config {
@@ -30,6 +32,8 @@ export class Config {
       showSuggestions: this.config.get<boolean>('showSuggestions') ?? true,
       autoComplete: this.config.get<boolean>('autoComplete') ?? true,
       formatOnSave: this.config.get<boolean>('formatOnSave', true),
+      useLocalFile: this.config.get<boolean>('useLocalFile', false),
+      cssFilePath: this.config.get<string>('cssFilePath', ''),
     };
 
     return config;
@@ -51,6 +55,8 @@ export class Config {
       showSuggestions: 'showSuggestions',
       autoComplete: 'autoComplete',
       formatOnSave: 'formatOnSave',
+      useLocalFile: 'useLocalFile',
+      cssFilePath: 'cssFilePath',
     };
     return keyMap[key];
   }

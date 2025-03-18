@@ -40,18 +40,23 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
   }
 
   private sortBootstrapClasses(classNames: string): string {
-    return classNames
-      .split(' ')
-      .filter((className) => className.trim())
-      .sort((a, b) => {
-        const categoryA = this.getClassCategory(a);
-        const categoryB = this.getClassCategory(b);
-        if (categoryA === categoryB) {
-          return a.localeCompare(b);
-        }
-        return categoryA.localeCompare(categoryB);
-      })
-      .join(' ');
+    // Teile die Klassen auf und entferne Leerzeichen
+    return (
+      classNames
+        .split(/\s+/)
+        .filter((className) => className.trim())
+        // Entferne Duplikate
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .sort((a, b) => {
+          const categoryA = this.getClassCategory(a);
+          const categoryB = this.getClassCategory(b);
+          if (categoryA === categoryB) {
+            return a.localeCompare(b);
+          }
+          return categoryA.localeCompare(categoryB);
+        })
+        .join(' ')
+    );
   }
 
   public provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
@@ -73,7 +78,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
         const line = document.lineAt(i);
         const text = line.text;
 
-        // search for class attributes
+        // Verbesserte Regex für class-Attribute
         const classRegex = /class(?:Name)?=["']([^"']*)["']/g;
         let match;
 
@@ -82,13 +87,18 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
           const classContent = match[1];
           const sortedClasses = this.sortBootstrapClasses(classContent);
 
+          // Nur ersetzen, wenn sich etwas geändert hat
           if (sortedClasses !== classContent) {
             const startPos = new vscode.Position(i, match.index);
             const endPos = new vscode.Position(i, match.index + fullMatch.length);
             const range = new vscode.Range(startPos, endPos);
 
+            // Verwende das gleiche Anführungszeichen wie im Original
             const quote = fullMatch.includes('"') ? '"' : "'";
-            const newText = `class=${quote}${sortedClasses}${quote}`;
+
+            // Erhalte den originalen Attributnamen (class oder className)
+            const attrName = fullMatch.startsWith('class=') ? 'class' : 'className';
+            const newText = `${attrName}=${quote}${sortedClasses}${quote}`;
 
             edits.push(vscode.TextEdit.replace(range, newText));
           }
