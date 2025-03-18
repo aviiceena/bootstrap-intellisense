@@ -20,8 +20,8 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
   }
 
   private getClassCategory(className: string): string {
-    // Layout Classes
-    if (/^(container|row|col|grid|flex|d-|order-|offset-|g-)/.test(className)) {
+    // Layout Classes - should match first for proper sorting
+    if (/^(container|container-fluid|row|col|col-|grid|flex|d-|order-|offset-|g-)/.test(className)) {
       return '1-layout';
     }
 
@@ -31,7 +31,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     }
 
     // Utilities
-    if (/^(m-|p-|text-|bg-|border|rounded|shadow|w-|h-|position-|float-|align|justify)/.test(className)) {
+    if (/^(m-|p-|text-|bg-|border|rounded|shadow|w-|h-|position-|float-|align-|justify-|display-)/.test(className)) {
       return '3-utilities';
     }
 
@@ -40,23 +40,32 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
   }
 
   private sortBootstrapClasses(classNames: string): string {
-    // Teile die Klassen auf und entferne Leerzeichen
-    return (
-      classNames
-        .split(/\s+/)
-        .filter((className) => className.trim())
-        // Entferne Duplikate
-        .filter((value, index, self) => self.indexOf(value) === index)
-        .sort((a, b) => {
-          const categoryA = this.getClassCategory(a);
-          const categoryB = this.getClassCategory(b);
-          if (categoryA === categoryB) {
-            return a.localeCompare(b);
-          }
-          return categoryA.localeCompare(categoryB);
-        })
-        .join(' ')
+    // Skip if empty
+    if (!classNames || !classNames.trim()) {
+      return classNames;
+    }
+    
+    // Split classes, remove empty entries and deduplicate
+    const uniqueClasses = Array.from(
+      new Set(
+        classNames
+          .split(/\s+/)
+          .map(c => c.trim())
+          .filter(Boolean)
+      )
     );
+    
+    // Sort by category
+    return uniqueClasses
+      .sort((a, b) => {
+        const categoryA = this.getClassCategory(a);
+        const categoryB = this.getClassCategory(b);
+        if (categoryA === categoryB) {
+          return a.localeCompare(b);
+        }
+        return categoryA.localeCompare(categoryB);
+      })
+      .join(' ');
   }
 
   public provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
@@ -78,8 +87,8 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
         const line = document.lineAt(i);
         const text = line.text;
 
-        // Verbesserte Regex für class-Attribute
-        const classRegex = /class(?:Name)?=["']([^"']*)["']/g;
+        // Improved regex for class attributes - handles more valid HTML scenarios
+        const classRegex = /\bclass(?:Name)?=["']([^"']*)["']/g;
         let match;
 
         while ((match = classRegex.exec(text)) !== null) {
@@ -87,16 +96,16 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
           const classContent = match[1];
           const sortedClasses = this.sortBootstrapClasses(classContent);
 
-          // Nur ersetzen, wenn sich etwas geändert hat
+          // Only replace if something has changed
           if (sortedClasses !== classContent) {
             const startPos = new vscode.Position(i, match.index);
             const endPos = new vscode.Position(i, match.index + fullMatch.length);
             const range = new vscode.Range(startPos, endPos);
 
-            // Verwende das gleiche Anführungszeichen wie im Original
+            // Use the same quote as in the original
             const quote = fullMatch.includes('"') ? '"' : "'";
 
-            // Erhalte den originalen Attributnamen (class oder className)
+            // Keep the original attribute name (class or className)
             const attrName = fullMatch.startsWith('class=') ? 'class' : 'className';
             const newText = `${attrName}=${quote}${sortedClasses}${quote}`;
 
@@ -104,7 +113,9 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
           }
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error in Bootstrap formatter:', error);
+    }
 
     return edits;
   }
