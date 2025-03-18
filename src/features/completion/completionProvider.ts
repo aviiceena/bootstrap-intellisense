@@ -85,11 +85,7 @@ export class CompletionProvider {
             return [];
           }
 
-          try {
-            return await this.provideCompletionItems(document, position);
-          } catch (error) {
-            return [];
-          }
+          return await this.provideCompletionItems(document, position);
         },
       },
       '"',
@@ -118,24 +114,19 @@ export class CompletionProvider {
       return false;
     }
 
-    try {
-      const line = document.lineAt(position.line);
-      const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
-      const textBefore = document.getText(beforeRange);
-      const shouldProvide = /class(?:Name)?=["']?[^"']*$/.test(textBefore);
-      return shouldProvide;
-    } catch (error) {
-      return false;
-    }
+    const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
+    const textBefore = document.getText(beforeRange);
+    const shouldProvide = /class(?:Name)?=["']?[^"']*$/.test(textBefore);
+    return shouldProvide;
   }
 
   private getClassCategory(className: string): string {
-    // Layout-Klassen
+    // Layout classes
     if (/^(container|row|col|grid|flex|d-|order-|offset-|g-)/.test(className)) {
       return '1-layout';
     }
 
-    // Komponenten
+    // Components
     if (/^(btn|card|nav|navbar|modal|form|input|dropdown|alert|badge|list|table)/.test(className)) {
       return '2-components';
     }
@@ -145,8 +136,12 @@ export class CompletionProvider {
       return '3-utilities';
     }
 
-    // Sonstiges
+    // Other
     return '4-other';
+  }
+
+  private getClassParts(className: string): number {
+    return className.split('-').length;
   }
 
   private async provideCompletionItems(
@@ -157,33 +152,30 @@ export class CompletionProvider {
       return [];
     }
 
-    try {
-      if (!this.cachedClasses && this.isActive) {
-        this.cachedClasses = await getClasses(this.bootstrapVersion, this.useLocalFile, this.cssFilePath);
-      }
+    if (!this.cachedClasses && this.isActive) {
+      this.cachedClasses = await getClasses(this.bootstrapVersion, this.useLocalFile, this.cssFilePath);
+    }
 
-      if (!this.cachedClasses) {
-        return [];
-      }
-
-      const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
-      const textBefore = document.getText(beforeRange);
-      const match = textBefore.match(/class(?:Name)?=["']([^"']*)$/);
-      const usedClasses = match ? match[1].split(' ').filter((c) => c.trim()) : [];
-
-      return this.cachedClasses
-        .filter(({ className }) => !usedClasses.includes(className))
-        .map(({ className, classProperties }) => {
-          const item = new vscode.CompletionItem(className, vscode.CompletionItemKind.Value);
-          item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
-          item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
-          item.insertText = this.autoComplete ? className : '';
-          item.sortText = `${this.getClassCategory(className)}-${className}`;
-          return item;
-        });
-    } catch (error) {
+    if (!this.cachedClasses) {
       return [];
     }
+
+    const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
+    const textBefore = document.getText(beforeRange);
+    const match = textBefore.match(/class(?:Name)?=["']([^"']*)$/);
+    const usedClasses = match ? match[1].split(' ').filter((c) => c.trim()) : [];
+
+    return this.cachedClasses
+      .filter(({ className }) => !usedClasses.includes(className))
+      .map(({ className, classProperties }) => {
+        const item = new vscode.CompletionItem(className, vscode.CompletionItemKind.Value);
+        item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
+        item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
+        item.insertText = this.autoComplete ? className : '';
+        const parts = this.getClassParts(className);
+        item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
+        return item;
+      });
   }
 
   public updateVersion(version: string) {

@@ -40,12 +40,8 @@ export class Config {
   }
 
   public async updateConfig(key: keyof BootstrapConfig, value: any): Promise<void> {
-    try {
-      const configKey = this.getConfigKey(key);
-      await this.config.update(configKey, value, true);
-    } catch (error) {
-      throw error;
-    }
+    const configKey = this.getConfigKey(key);
+    await this.config.update(configKey, value, true);
   }
 
   private getConfigKey(key: keyof BootstrapConfig): string {

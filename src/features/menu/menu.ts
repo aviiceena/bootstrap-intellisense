@@ -195,9 +195,13 @@ export class Menu {
         kind: vscode.QuickPickItemKind.Separator,
       },
       { label: '$(add) Bootstrap 5.3.3' },
-      { label: '$(add) Bootstrap 5.2' },
-      { label: '$(add) Bootstrap 5.1' },
-      { label: '$(add) Bootstrap 5.0' },
+      { label: '$(add) Bootstrap 5.3.2' },
+      { label: '$(add) Bootstrap 5.3.1' },
+      { label: '$(add) Bootstrap 5.3.0' },
+      { label: '$(add) Bootstrap 5.2.3' },
+      { label: '$(add) Bootstrap 5.2.2' },
+      { label: '$(add) Bootstrap 5.2.1' },
+      { label: '$(add) Bootstrap 5.2.0' },
     ];
 
     const versionSelection = await vscode.window.showQuickPick(version5Options, {
@@ -211,8 +215,8 @@ export class Menu {
       } else {
         const versionNumber = versionSelection.label.split(' ').pop();
         if (versionNumber) {
-          await this.statusBar.setBootstrapVersion(versionNumber + '.0');
-          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}.0`);
+          await this.statusBar.setBootstrapVersion(versionNumber);
+          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
         }
       }
     }
@@ -225,13 +229,21 @@ export class Menu {
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
       },
-      { label: '$(add) Bootstrap 4.6' },
-      { label: '$(add) Bootstrap 4.5' },
-      { label: '$(add) Bootstrap 4.4' },
-      { label: '$(add) Bootstrap 4.3' },
-      { label: '$(add) Bootstrap 4.2' },
-      { label: '$(add) Bootstrap 4.1' },
-      { label: '$(add) Bootstrap 4.0' },
+      { label: '$(add) Bootstrap 4.6.1' },
+      { label: '$(add) Bootstrap 4.6.0' },
+      { label: '$(add) Bootstrap 4.5.3' },
+      { label: '$(add) Bootstrap 4.5.2' },
+      { label: '$(add) Bootstrap 4.5.1' },
+      { label: '$(add) Bootstrap 4.5.0' },
+      { label: '$(add) Bootstrap 4.4.1' },
+      { label: '$(add) Bootstrap 4.4.0' },
+      { label: '$(add) Bootstrap 4.3.1' },
+      { label: '$(add) Bootstrap 4.3.0' },
+      { label: '$(add) Bootstrap 4.2.1' },
+      { label: '$(add) Bootstrap 4.1.3' },
+      { label: '$(add) Bootstrap 4.1.2' },
+      { label: '$(add) Bootstrap 4.1.1' },
+      { label: '$(add) Bootstrap 4.0.0' },
     ];
 
     const versionSelection = await vscode.window.showQuickPick(version4Options, {
@@ -245,8 +257,8 @@ export class Menu {
       } else {
         const versionNumber = versionSelection.label.split(' ').pop();
         if (versionNumber) {
-          await this.statusBar.setBootstrapVersion(versionNumber + '.0');
-          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}.0`);
+          await this.statusBar.setBootstrapVersion(versionNumber);
+          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
         }
       }
     }
@@ -259,8 +271,18 @@ export class Menu {
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
       },
-      { label: '$(add) Bootstrap 3.4' },
-      { label: '$(add) Bootstrap 3.3' },
+      { label: '$(add) Bootstrap 3.4.1' },
+      { label: '$(add) Bootstrap 3.4.0' },
+      { label: '$(add) Bootstrap 3.3.7' },
+      { label: '$(add) Bootstrap 3.3.6' },
+      { label: '$(add) Bootstrap 3.3.5' },
+      { label: '$(add) Bootstrap 3.3.4' },
+      { label: '$(add) Bootstrap 3.3.3' },
+      { label: '$(add) Bootstrap 3.3.2' },
+      { label: '$(add) Bootstrap 3.3.1' },
+      { label: '$(add) Bootstrap 3.3.0' },
+      { label: '$(add) Bootstrap 3.2.0' },
+      { label: '$(add) Bootstrap 3.1.1' },
     ];
 
     const versionSelection = await vscode.window.showQuickPick(version3Options, {
@@ -274,8 +296,8 @@ export class Menu {
       } else {
         const versionNumber = versionSelection.label.split(' ').pop();
         if (versionNumber) {
-          await this.statusBar.setBootstrapVersion(versionNumber + '.0');
-          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}.0`);
+          await this.statusBar.setBootstrapVersion(versionNumber);
+          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
         }
       }
     }

@@ -32,38 +32,34 @@ export class HoverProvider {
       return undefined;
     }
 
-    try {
-      const range = document.getWordRangeAtPosition(position);
-      if (!range) {
-        return undefined;
-      }
-
-      const line = document.lineAt(position.line);
-      const lineText = line.text;
-
-      // check if the cursor is within a class attribute
-      if (!this.isWithinClassAttribute(lineText, position.character)) {
-        return undefined;
-      }
-
-      const word = document.getText(range);
-
-      if (!this.cachedClasses) {
-        this.cachedClasses = await getClasses(this.bootstrapVersion);
-      }
-
-      const classInfo = this.cachedClasses.find((c) => c.className === word);
-      if (!classInfo) {
-        return undefined;
-      }
-
-      const content = new vscode.MarkdownString();
-      content.appendCodeblock(classInfo.classProperties, 'css');
-
-      return new vscode.Hover(content, range);
-    } catch (error) {
+    const range = document.getWordRangeAtPosition(position);
+    if (!range) {
       return undefined;
     }
+
+    const line = document.lineAt(position.line);
+    const lineText = line.text;
+
+    // check if the cursor is within a class attribute
+    if (!this.isWithinClassAttribute(lineText, position.character)) {
+      return undefined;
+    }
+
+    const word = document.getText(range);
+
+    if (!this.cachedClasses) {
+      this.cachedClasses = await getClasses(this.bootstrapVersion);
+    }
+
+    const classInfo = this.cachedClasses.find((c) => c.className === word);
+    if (!classInfo) {
+      return undefined;
+    }
+
+    const content = new vscode.MarkdownString();
+    content.appendCodeblock(classInfo.classProperties, 'css');
+
+    return new vscode.Hover(content, range);
   }
 
   private isWithinClassAttribute(lineText: string, position: number): boolean {

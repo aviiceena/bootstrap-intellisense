@@ -13,6 +13,11 @@ export class StatusBar {
     this.item = this.createStatusBarItem();
   }
 
+  private normalizePath(path: string): string {
+    // Konvertiere alle Backslashes zu Forward-Slashes
+    return path.replace(/\\/g, '/');
+  }
+
   private loadSettings() {
     try {
       const config = vscode.workspace.getConfiguration();
@@ -61,10 +66,9 @@ export class StatusBar {
 
   private getStatusBarText(): string {
     const statusIcon = this.isActive ? '$(bootstrap-icon-enable)' : '$(bootstrap-icon-disable)';
-    const statusText = this.isActive ? 'Active' : 'Inactive';
     const versionText = this.bootstrapVersion !== '0' ? ` v${this.bootstrapVersion}` : '';
     const localFileText = this.useLocalFile ? ' (Local)' : '';
-    return `${statusIcon} Bootstrap${versionText}${localFileText} (${statusText})`;
+    return `${statusIcon} Bootstrap${versionText}${localFileText}`;
   }
 
   private getStatusBarTooltip(): string {
@@ -122,6 +126,15 @@ export class StatusBar {
     this.cssFilePath = '';
 
     try {
+      if (oldVersion !== version) {
+        const { deleteAllBootstrapCaches } = require('../../core/bootstrap');
+        try {
+          deleteAllBootstrapCaches();
+        } catch (cacheError) {
+          console.error('Fehler beim Löschen des Bootstrap-Caches:', cacheError);
+        }
+      }
+
       await this.saveSettings();
       this.updateStatusBarText();
       this.callbacks.forEach((callback) =>
@@ -143,12 +156,21 @@ export class StatusBar {
     const oldUseLocalFile = this.useLocalFile;
     const wasInactive = !this.isActive;
 
-    this.cssFilePath = filePath;
+    this.cssFilePath = this.normalizePath(filePath);
     this.bootstrapVersion = version;
     this.useLocalFile = true;
     this.isActive = true;
 
     try {
+      if (oldPath !== this.cssFilePath || oldVersion !== this.bootstrapVersion || !oldUseLocalFile) {
+        const { deleteAllBootstrapCaches } = require('../../core/bootstrap');
+        try {
+          deleteAllBootstrapCaches();
+        } catch (cacheError) {
+          console.error('Fehler beim Löschen des Bootstrap-Caches:', cacheError);
+        }
+      }
+
       await this.saveSettings();
       this.updateStatusBarText();
       this.callbacks.forEach((callback) =>
@@ -167,7 +189,9 @@ export class StatusBar {
   }
 
   public async disableLocalFile() {
-    if (!this.useLocalFile) return;
+    if (!this.useLocalFile) {
+      return;
+    }
 
     const oldUseLocalFile = this.useLocalFile;
     const oldCssFilePath = this.cssFilePath;
