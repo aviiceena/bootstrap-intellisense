@@ -41,61 +41,104 @@ function registerFormatter(context: vscode.ExtensionContext, formatter: Bootstra
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  try {
-    // Register core dependencies
-    container.register('context', context);
-    container.register('config', config);
+  // Register core dependencies
+  container.register('context', context);
+  container.register('config', config);
 
-    const bootstrapConfig = config.getBootstrapConfig();
+  const bootstrapConfig = config.getBootstrapConfig();
 
-    // Initialize features
-    const statusBar = new StatusBar();
-    const menu = new Menu(statusBar);
-    formatter = new BootstrapFormatter();
+  // Initialize features
+  const statusBar = new StatusBar();
+  const menu = new Menu(statusBar);
+  formatter = new BootstrapFormatter();
 
-    container.register('statusBar', statusBar);
-    container.register('menu', menu);
-    container.register('formatter', formatter);
+  container.register('statusBar', statusBar);
+  container.register('menu', menu);
+  container.register('formatter', formatter);
 
-    if (bootstrapConfig.isActive) {
-      // Initialize providers with current configuration
-      completionProvider = new CompletionProvider(
-        bootstrapConfig.isActive,
-        bootstrapConfig.version,
-        bootstrapConfig.showSuggestions,
-        bootstrapConfig.autoComplete,
-        bootstrapConfig.useLocalFile,
-        bootstrapConfig.cssFilePath,
-      );
+  if (bootstrapConfig.isActive) {
+    // Initialize providers with current configuration
+    completionProvider = new CompletionProvider(
+      bootstrapConfig.isActive,
+      bootstrapConfig.version,
+      bootstrapConfig.showSuggestions,
+      bootstrapConfig.autoComplete,
+      bootstrapConfig.useLocalFile,
+      bootstrapConfig.cssFilePath,
+    );
 
-      hoverProvider = new HoverProvider(bootstrapConfig.isActive, bootstrapConfig.version);
+    hoverProvider = new HoverProvider(bootstrapConfig.isActive, bootstrapConfig.version);
 
-      container.register('completionProvider', completionProvider);
-      container.register('hoverProvider', hoverProvider);
+    container.register('completionProvider', completionProvider);
+    container.register('hoverProvider', hoverProvider);
 
-      completionProvider.register(context);
-      hoverProvider.register(context);
+    completionProvider.register(context);
+    hoverProvider.register(context);
 
-      registerFormatter(context, formatter, config);
+    registerFormatter(context, formatter, config);
+  }
+
+  // Subscribe to status changes
+  statusBar.subscribe((isActive, useLocalFile, cssFilePath, version) => {
+    // Explicitly update CompletionProvider with current configuration
+    if (completionProvider) {
+      completionProvider.dispose();
+      completionProvider = undefined;
     }
 
-    // Subscribe to status changes
-    statusBar.subscribe((isActive, useLocalFile, cssFilePath, version) => {
-      try {
-        // Explicitly update CompletionProvider with current configuration
+    if (isActive) {
+      completionProvider = new CompletionProvider(
+        isActive,
+        version,
+        config.get<boolean>('showSuggestions') ?? true,
+        config.get<boolean>('autoComplete') ?? true,
+        useLocalFile,
+        cssFilePath,
+      );
+
+      container.register('completionProvider', completionProvider);
+      completionProvider.register(context);
+
+      if (hoverProvider) {
+        hoverProvider.dispose();
+      }
+      hoverProvider = new HoverProvider(isActive, version);
+      container.register('hoverProvider', hoverProvider);
+      hoverProvider.register(context);
+    }
+
+    if (formatter) {
+      formatter.updateConfig(isActive);
+      if (isActive) {
+        registerFormatter(context, formatter, config);
+      }
+    }
+  });
+
+  // Register commands and configuration change handler
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bootstrap-intelliSense.showMainMenu', async () => {
+      const menu = container.get<Menu>('menu');
+      await menu.showMainMenu();
+    }),
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration('bootstrapIntelliSense')) {
+        const newConfig = config.getBootstrapConfig();
+
+        // Recreate providers with the new configuration
         if (completionProvider) {
           completionProvider.dispose();
           completionProvider = undefined;
         }
 
-        if (isActive) {
+        if (newConfig.isActive) {
           completionProvider = new CompletionProvider(
-            isActive,
-            version,
-            config.get<boolean>('showSuggestions') ?? true,
-            config.get<boolean>('autoComplete') ?? true,
-            useLocalFile,
-            cssFilePath,
+            newConfig.isActive,
+            newConfig.version,
+            newConfig.showSuggestions,
+            newConfig.autoComplete,
+            newConfig.useLocalFile,
+            newConfig.cssFilePath,
           );
 
           container.register('completionProvider', completionProvider);
@@ -104,69 +147,18 @@ export async function activate(context: vscode.ExtensionContext) {
           if (hoverProvider) {
             hoverProvider.dispose();
           }
-          hoverProvider = new HoverProvider(isActive, version);
+          hoverProvider = new HoverProvider(newConfig.isActive, newConfig.version);
           container.register('hoverProvider', hoverProvider);
           hoverProvider.register(context);
         }
 
         if (formatter) {
-          formatter.updateConfig(isActive);
-          if (isActive) {
-            registerFormatter(context, formatter, config);
-          }
+          formatter.updateConfig(newConfig.isActive);
         }
-      } catch (error) {}
-    });
-
-    // Register commands and configuration change handler
-    context.subscriptions.push(
-      vscode.commands.registerCommand('bootstrap-intelliSense.showMainMenu', async () => {
-        try {
-          const menu = container.get<Menu>('menu');
-          await menu.showMainMenu();
-        } catch (error) {}
-      }),
-      vscode.workspace.onDidChangeConfiguration(async (e) => {
-        if (e.affectsConfiguration('bootstrapIntelliSense')) {
-          try {
-            const newConfig = config.getBootstrapConfig();
-
-            // Recreate providers with the new configuration
-            if (completionProvider) {
-              completionProvider.dispose();
-              completionProvider = undefined;
-            }
-
-            if (newConfig.isActive) {
-              completionProvider = new CompletionProvider(
-                newConfig.isActive,
-                newConfig.version,
-                newConfig.showSuggestions,
-                newConfig.autoComplete,
-                newConfig.useLocalFile,
-                newConfig.cssFilePath,
-              );
-
-              container.register('completionProvider', completionProvider);
-              completionProvider.register(context);
-
-              if (hoverProvider) {
-                hoverProvider.dispose();
-              }
-              hoverProvider = new HoverProvider(newConfig.isActive, newConfig.version);
-              container.register('hoverProvider', hoverProvider);
-              hoverProvider.register(context);
-            }
-
-            if (formatter) {
-              formatter.updateConfig(newConfig.isActive);
-            }
-          } catch (error) {}
-        }
-      }),
-      statusBar,
-    );
-  } catch (error) {}
+      }
+    }),
+    statusBar,
+  );
 }
 
 export function deactivate() {
