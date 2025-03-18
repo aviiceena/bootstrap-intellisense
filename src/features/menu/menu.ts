@@ -1,17 +1,23 @@
 import * as vscode from 'vscode';
 import { StatusBar } from '../statusBar/statusBar';
+import { findBootstrapCssFiles, readLocalCssFile, extractBootstrapVersion } from '../../core/bootstrap';
+import * as path from 'path';
 
 export class Menu {
   constructor(private statusBar: StatusBar) {}
 
   public async showMainMenu() {
+    const isUsingLocalFile = this.statusBar.getUseLocalFile();
     const mainOptions: vscode.QuickPickItem[] = [
       {
-        label: '$(versions) Select Bootstrap version',
+        label: isUsingLocalFile
+          ? '$(versions) Select Bootstrap version'
+          : `$(versions) Select Bootstrap version (v${this.statusBar.getBootstrapVersion()})`,
       },
       {
-        label: '$(sparkle) From local files for offline use',
-        description: 'coming soon',
+        label: isUsingLocalFile
+          ? `$(sparkle) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`
+          : '$(sparkle) From local files for offline use',
       },
       {
         label: '',
@@ -41,9 +47,107 @@ export class Menu {
           await this.statusBar.toggleActive();
           break;
         case '$(versions) Select Bootstrap version':
+        case `$(versions) Select Bootstrap version (v${this.statusBar.getBootstrapVersion()})`:
+          // If using local file, disable it first
+          if (isUsingLocalFile) {
+            await this.statusBar.disableLocalFile();
+            vscode.window.showInformationMessage('Switched from local file to online Bootstrap version');
+          }
           await this.showBootstrapVersionMenu();
           break;
+        case '$(sparkle) From local files for offline use':
+        case `$(sparkle) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`:
+          await this.showLocalFilesMenu();
+          break;
       }
+    }
+  }
+
+  private async showLocalFilesMenu() {
+    try {
+      const bootstrapFiles = await findBootstrapCssFiles();
+
+      const items: vscode.QuickPickItem[] = [
+        { label: '$(arrow-left) Back' },
+        {
+          label: '',
+          kind: vscode.QuickPickItemKind.Separator,
+        },
+        { label: '$(folder-opened) Browse files...', detail: 'Select a custom Bootstrap CSS file' },
+      ];
+
+      // Add found files to the menu
+      if (bootstrapFiles.length > 0) {
+        items.push({
+          label: '',
+          kind: vscode.QuickPickItemKind.Separator,
+          detail: 'Detected Bootstrap files',
+        });
+
+        for (const file of bootstrapFiles) {
+          items.push({
+            label: `$(file) ${path.basename(file)}`,
+            detail: file,
+            description: path.dirname(file),
+          });
+        }
+      }
+
+      const selection = await vscode.window.showQuickPick(items, {
+        title: 'Select Bootstrap CSS File',
+        placeHolder: 'Choose a Bootstrap CSS file for offline use',
+      });
+
+      if (!selection) {
+        return;
+      }
+
+      if (selection.label === '$(arrow-left) Back') {
+        await this.showMainMenu();
+        return;
+      }
+
+      let selectedFile: string | undefined;
+
+      if (selection.label === '$(folder-opened) Browse files...') {
+        // Open file dialog
+        const uris = await vscode.window.showOpenDialog({
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: false,
+          filters: {
+            'CSS Files': ['css'],
+          },
+          title: 'Select Bootstrap CSS File',
+        });
+
+        if (uris && uris.length > 0) {
+          selectedFile = uris[0].fsPath;
+        }
+      } else if (selection.detail) {
+        // Use the selected file
+        selectedFile = selection.detail;
+      }
+
+      if (selectedFile) {
+        try {
+          // Read the file to extract version
+          const cssContent = await readLocalCssFile(selectedFile);
+          const version = extractBootstrapVersion(cssContent);
+
+          // Save settings and update
+          await this.statusBar.setLocalFile(selectedFile, version);
+
+          vscode.window.showInformationMessage(
+            `Using local Bootstrap file: ${path.basename(selectedFile)}${version !== '0' ? ` (v${version})` : ''}`,
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage('Failed to read the selected Bootstrap CSS file');
+        }
+      }
+    } catch (error) {
+      console.error(`Error loading Bootstrap CSS files: ${error}`);
+      vscode.window.showErrorMessage('Error loading Bootstrap CSS files');
     }
   }
 

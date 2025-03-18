@@ -1,4 +1,7 @@
 import * as https from 'https';
+import * as fs from 'fs';
+import * as vscode from 'vscode';
+import * as path from 'path';
 
 interface CssClass {
   className: string;
@@ -79,9 +82,90 @@ const fetchBootstrapCss = async (version: string): Promise<string> => {
   });
 };
 
-export const getClasses = async (version: string): Promise<CssClass[]> => {
+// Extract Bootstrap version from CSS comment
+export const extractBootstrapVersion = (css: string): string => {
   try {
-    const rawCss = await fetchBootstrapCss(version);
+    const versionRegex = /Bootstrap\s+v(\d+\.\d+\.\d+)/i;
+    const match = css.match(versionRegex);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return '0';
+  } catch (error) {
+    return '0';
+  }
+};
+
+// Read CSS from local file
+export const readLocalCssFile = async (filePath: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    try {
+      fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(data);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Find Bootstrap CSS files in workspace
+export const findBootstrapCssFiles = async (): Promise<string[]> => {
+  const result: string[] = [];
+
+  try {
+    // Search in workspace folders
+    if (vscode.workspace.workspaceFolders) {
+      for (const folder of vscode.workspace.workspaceFolders) {
+        // Check for node_modules bootstrap
+        const nodeModulesPath = path.join(
+          folder.uri.fsPath,
+          'node_modules',
+          'bootstrap',
+          'dist',
+          'css',
+          'bootstrap.min.css',
+        );
+        if (fs.existsSync(nodeModulesPath)) {
+          result.push(nodeModulesPath);
+        }
+
+        // Find *.bootstrap*.css or *bootstrap*.min.css files
+        const files = await vscode.workspace.findFiles('**/*bootstrap*.{css,min.css}', '**/node_modules/**');
+
+        for (const file of files) {
+          result.push(file.fsPath);
+        }
+      }
+    }
+
+    return [...new Set(result)]; // Remove duplicates
+  } catch (error) {
+    return [];
+  }
+};
+
+export const getClasses = async (
+  version: string,
+  useLocalFile: boolean = false,
+  cssFilePath: string = '',
+): Promise<CssClass[]> => {
+  try {
+    let rawCss: string;
+
+    if (useLocalFile && cssFilePath) {
+      try {
+        rawCss = await readLocalCssFile(cssFilePath);
+      } catch (err) {
+        throw err;
+      }
+    } else {
+      rawCss = await fetchBootstrapCss(version);
+    }
 
     if (!rawCss) {
       return [];
