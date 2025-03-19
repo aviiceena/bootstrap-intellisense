@@ -80,6 +80,20 @@ function recreateProviders(context: vscode.ExtensionContext, isActive: boolean, 
       formatter.updateConfig(isActive);
       registerFormatter(context, formatter, config);
     }
+  } else {
+    // If extension is not active, dispose of hover provider
+    if (hoverProvider) {
+      hoverProvider.dispose();
+      hoverProvider = undefined;
+    }
+    
+    // Update formatter to inactive state if it exists
+    if (formatter) {
+      formatter.updateConfig(false);
+      // Remove formatter registrations when extension is inactive
+      formatterDisposables.forEach(d => d.dispose());
+      formatterDisposables = [];
+    }
   }
 }
 
