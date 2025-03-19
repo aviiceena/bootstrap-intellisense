@@ -184,67 +184,59 @@ export class Menu {
     const predefinedLanguageIds = availableLanguages.map((lang) => lang.id);
     const customLanguageIds = currentLanguages.filter((id) => !predefinedLanguageIds.includes(id));
 
-    // Create menu items for custom languages
-    const customLanguageItems: vscode.QuickPickItem[] = [];
+    // Create a combined menu with all options
+    const allLanguageItems: vscode.QuickPickItem[] = [];
+
+    // Add custom languages at the top if there are any
     if (customLanguageIds.length > 0) {
-      customLanguageItems.push({
+      allLanguageItems.push({
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
-        detail: 'Custom language IDs',
+        detail: 'Custom language IDs'
       });
 
       for (const customId of customLanguageIds) {
-        customLanguageItems.push({
+        allLanguageItems.push({
           label: `${customId} (Custom)`,
           description: customId,
-          picked: true,
+          picked: true
         });
       }
-    }
 
-    const languageItems: vscode.QuickPickItem[] = [
-      { label: '$(arrow-left) Back' },
-      {
+      allLanguageItems.push({
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
-        detail: 'Select language support',
-      },
-    ];
-
-    // Add custom languages at the top
-    languageItems.push(...customLanguageItems);
+        detail: 'Predefined languages'
+      });
+    }
 
     // Add predefined languages
     for (const lang of availableLanguages) {
-      languageItems.push({
+      allLanguageItems.push({
         label: `${lang.label}`,
         description: lang.id,
         picked: currentLanguages.includes(lang.id),
       });
     }
 
-    const selection = await vscode.window.showQuickPick(languageItems, {
+    // Show the language selection menu
+    const selection = await vscode.window.showQuickPick(allLanguageItems, {
       title: 'Configure Language Support',
-      placeHolder: 'Select languages to enable Bootstrap IntelliSense',
+      placeHolder: 'Select languages to enable Bootstrap IntelliSense (Esc to go back)',
       canPickMany: true,
     });
 
+    // If user pressed Escape, go back to the language support menu
     if (!selection) {
       await this.showLanguageSupportMenu();
       return;
     }
 
-    if (selection.length === 1 && selection[0].label === '$(arrow-left) Back') {
-      await this.showLanguageSupportMenu();
-      return;
-    }
-
-    // Filter out the "Back" option
+    // Map selected languages
     const selectedLanguages = selection
-      .filter((item) => item.label !== '$(arrow-left) Back')
       .map((item) => item.description)
       .filter(Boolean) as string[];
-
+    
     // Preserve custom languages if they weren't explicitly deselected
     const selectedLanguageSet = new Set(selectedLanguages);
     const updatedLanguages = [...selectedLanguageSet];
