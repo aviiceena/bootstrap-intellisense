@@ -1,5 +1,15 @@
 # Change Log
 
+## v3.0.0 2025-03-19
+
+- Now supports local bootstrap css files.
+- Class hover preview show the complete CSS for class names.
+- New Bootstrap versions added.
+- Sorting classes with `ctrl + s`.
+- Added custom language support for Bootstrap classes or chooose from predefined language list.
+- Bootstrap css classes are now saved in the cache.
+- Fixed bugs.
+
 ## v2.1.1 2025-03-02
 
 - Fixed minor bugs.

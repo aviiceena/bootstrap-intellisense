@@ -13,7 +13,19 @@ export function updateLanguageSupport(languages?: string[]) {
     languageSupport = [...languages];
   } else {
     // Default languages supported in VSCode if no settings are present
-    languageSupport = ['php', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact'];
+    languageSupport = [
+      'html',
+      'css',
+      'php',
+      'javascript',
+      'javascriptreact',
+      'typescript',
+      'typescriptreact',
+      'vue',
+      'svelte',
+      'handlebars',
+      'razor',
+    ];
   }
 }
 
