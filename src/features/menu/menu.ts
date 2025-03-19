@@ -16,8 +16,11 @@ export class Menu {
       },
       {
         label: isUsingLocalFile
-          ? `$(sparkle) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`
-          : '$(sparkle) From local files for offline use',
+          ? `$(folder-library) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`
+          : '$(folder-library) From local files for offline use',
+      },
+      {
+        label: '$(sparkle) Add language support',
       },
       {
         label: '',
@@ -55,8 +58,8 @@ export class Menu {
           }
           await this.showBootstrapVersionMenu();
           break;
-        case '$(sparkle) From local files for offline use':
-        case `$(sparkle) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`:
+        case '$(folder-library) From local files for offline use':
+        case `$(folder-library) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`:
           await this.showLocalFilesMenu();
           break;
       }
