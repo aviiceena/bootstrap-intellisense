@@ -8,6 +8,7 @@ export interface BootstrapConfig {
   formatOnSave: boolean;
   useLocalFile?: boolean;
   cssFilePath?: string;
+  languageSupport?: string[];
 }
 
 export class Config {
@@ -34,6 +35,7 @@ export class Config {
       formatOnSave: this.config.get<boolean>('formatOnSave', true),
       useLocalFile: this.config.get<boolean>('useLocalFile', false),
       cssFilePath: this.config.get<string>('cssFilePath', ''),
+      languageSupport: this.config.get<string[]>('languageSupport', []),
     };
 
     return config;
@@ -53,6 +55,7 @@ export class Config {
       formatOnSave: 'formatOnSave',
       useLocalFile: 'useLocalFile',
       cssFilePath: 'cssFilePath',
+      languageSupport: 'languageSupport',
     };
     return keyMap[key];
   }

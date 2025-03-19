@@ -1,27 +1,27 @@
-# Lokale Bootstrap-CSS-Dateien verwenden
+# Using Local Bootstrap CSS Files
 
-## Ziel
+## Objective
 
-Das Feature ermöglicht es Benutzern, Bootstrap-CSS-Dateien lokal zu verwenden, anstatt eine Version aus dem Internet auszuwählen. Dadurch wird eine bessere Offline-Nutzung und Flexibilität bei der Wahl der Bootstrap-Version gewährleistet.
+This feature allows users to use Bootstrap CSS files locally instead of selecting a version from the internet. This ensures better offline usage and flexibility in choosing the Bootstrap version.
 
 ## Workflow
 
-### 1. Menüaufruf über die Statusleiste
+### 1. Menu Access via Status Bar
 
-- Der Benutzer klickt auf das Statusleisten-Icon der Erweiterung.
-- Ein Menü wird geöffnet, in dem die Option **"Bootstrap From Local Files"** auswählbar ist.
+- The user clicks on the extension's status bar icon.
+- A menu opens where the option **"Bootstrap From Local Files"** is selectable.
 
-### 2. Auswahl der Bootstrap-CSS-Datei
+### 2. Selection of Bootstrap CSS File
 
-- Ein neues Menü erscheint, das automatisch erkannte Bootstrap-CSS-Dateien auflistet.
-- Falls Bootstrap in `node_modules` vorhanden ist, wird `bootstrap.min.css` ebenfalls zur Auswahl hinzugefügt.
-- Der Benutzer kann entweder eine der erkannten Dateien auswählen oder eine eigene Datei vom PC laden.
+- A new menu appears listing automatically detected Bootstrap CSS files.
+- If Bootstrap is present in `node_modules`, `bootstrap.min.css` is also added to the selection.
+- The user can either select one of the detected files or load their own file from their PC.
 
-### 3. Speicherung der Auswahl
+### 3. Saving the Selection
 
-- Die gewählte Datei wird in `settings.json` gespeichert.
-- ich will dass alles ine einem bootstrapIntelliSense Onjekt gespeichert wird.
-- Beispielhafte Konfiguration:
+- The selected file is saved in `settings.json`.
+- I want everything to be stored in a bootstrapIntelliSense object.
+- Example configuration:
   ```json
   "bootstrapIntelliSense": {
     "enable": true,
@@ -31,25 +31,25 @@ Das Feature ermöglicht es Benutzern, Bootstrap-CSS-Dateien lokal zu verwenden, 
   }
   ```
 
-### 4. Aktualisierung der Anzeige im Hauptmenü
+### 4. Updating the Display in the Main Menu
 
-- Das Hauptmenü zeigt:
-  - Eine Checkbox für "From Local Files for Offline Use".
-  - Die aktuell verwendete Bootstrap-Version:
-    - "Select Bootstrap version" (wenn eine Online-Version genutzt wird)
-    - "From Local Files" (wenn eine lokale Datei verwendet wird)
+- The main menu shows:
+  - A checkbox for "From Local Files for Offline Use".
+  - The currently used Bootstrap version:
+    - "Select Bootstrap version" (when an online version is used)
+    - "From Local Files" (when a local file is used)
 
-### 5. Extrahierung der Bootstrap-Version
+### 5. Extraction of the Bootstrap Version
 
-- Die Version wird automatisch aus der `bootstrap.min.css` Datei ausgelesen.
-- Beispiel:
+- The version is automatically read from the `bootstrap.min.css` file.
+- Example:
   ```css
   @charset "UTF-8";
   /*! * Bootstrap  v5.3.3 (https://getbootstrap.com/) */
   ```
-- In der Statubar wird immer die verison von "select bootstrap version" angezeigt. und es soll die extrahierte version angezeigt werden.
+- The status bar always shows the version from "select bootstrap version" and should display the extracted version.
 
-### 6. Vorschläge für Bootstrap-Klassen basierend auf der Auswahl
+### 6. Suggestions for Bootstrap Classes Based on Selection
 
-- Wenn "From Local Files" aktiv ist, werden nur Klassen aus der lokalen Datei vorgeschlagen.
-- Wenn "Select Bootstrap version" aktiv ist, werden Klassen aus der Online-Version vorgeschlagen.
+- When "From Local Files" is active, only classes from the local file are suggested.
+- When "Select Bootstrap version" is active, classes from the online version are suggested.
