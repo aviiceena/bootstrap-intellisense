@@ -20,7 +20,7 @@ export class Menu {
           : '$(folder-library) From local files for offline use',
       },
       {
-        label: '$(sparkle) Add language support',
+        label: '$(diff-added) Add language support',
       },
       {
         label: '',
@@ -62,7 +62,7 @@ export class Menu {
         case `$(folder-library) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`:
           await this.showLocalFilesMenu();
           break;
-        case '$(sparkle) Add language support':
+        case '$(diff-added) Add language support':
           await this.showLanguageSupportMenu();
           break;
       }
@@ -70,8 +70,71 @@ export class Menu {
   }
 
   private async showLanguageSupportMenu() {
+    const languageOptions: vscode.QuickPickItem[] = [
+      { label: '$(arrow-left) Back' },
+      {
+        label: '',
+        kind: vscode.QuickPickItemKind.Separator,
+      },
+      {
+        label: '$(list-selection) Select from available languages',
+        description: 'Choose from predefined language list',
+      },
+      { label: '$(edit) Add custom language ID', description: 'Enter a custom language ID manually' },
+    ];
+
+    const selection = await vscode.window.showQuickPick(languageOptions, {
+      title: 'Language Support Options',
+      placeHolder: 'Choose how to add language support',
+    });
+
+    if (!selection) {
+      return;
+    }
+
+    if (selection.label === '$(arrow-left) Back') {
+      await this.showMainMenu();
+      return;
+    }
+
+    if (selection.label === '$(edit) Add custom language ID') {
+      await this.addCustomLanguage();
+    } else if (selection.label === '$(list-selection) Select from available languages') {
+      await this.showLanguageSelectionMenu();
+    }
+  }
+
+  private async addCustomLanguage() {
     const currentLanguages = this.statusBar.getLanguageSupport();
-    
+
+    const customId = await vscode.window.showInputBox({
+      title: 'Add Custom Language ID',
+      placeHolder: 'Enter a custom language ID (e.g., "custom-html")',
+      prompt: 'Enter a valid VS Code language identifier',
+    });
+
+    if (!customId) {
+      // User cancelled
+      await this.showLanguageSupportMenu();
+      return;
+    }
+
+    // Add the custom language to the current languages
+    if (!currentLanguages.includes(customId)) {
+      const updatedLanguages = [...currentLanguages, customId];
+      await this.statusBar.setLanguageSupport(updatedLanguages);
+      vscode.window.showInformationMessage(`Added support for custom language: ${customId}`);
+    } else {
+      vscode.window.showInformationMessage(`Language ${customId} is already supported`);
+    }
+
+    // Return to the language support menu
+    await this.showLanguageSupportMenu();
+  }
+
+  private async showLanguageSelectionMenu() {
+    const currentLanguages = this.statusBar.getLanguageSupport();
+
     const availableLanguages = [
       { id: 'html', label: 'HTML' },
       { id: 'php', label: 'PHP' },
@@ -94,12 +157,12 @@ export class Menu {
       { id: 'jinja-html', label: 'Jinja HTML' },
       { id: 'edge', label: 'Edge' },
       { id: 'markdown', label: 'Markdown' },
-      
+
       { id: 'javascript', label: 'JavaScript' },
       { id: 'javascriptreact', label: 'React (JSX)' },
       { id: 'typescript', label: 'TypeScript' },
       { id: 'typescriptreact', label: 'React (TSX)' },
-      
+
       { id: 'angular', label: 'Angular' },
       { id: 'vue', label: 'Vue' },
       { id: 'svelte', label: 'Svelte' },
@@ -107,16 +170,38 @@ export class Menu {
       { id: 'razor', label: 'Razor' },
       { id: 'cshtml', label: 'CSHTML' },
       { id: 'aspnetcorerazor', label: 'ASP.NET Core Razor' },
-      
+
       { id: 'css', label: 'CSS' },
       { id: 'scss', label: 'SCSS' },
       { id: 'sass', label: 'Sass' },
       { id: 'less', label: 'Less' },
       { id: 'stylus', label: 'Stylus' },
-      
-      { id: 'glimmer-js', label: 'Glimmer JS' }
+
+      { id: 'glimmer-js', label: 'Glimmer JS' },
     ];
-    
+
+    // Find custom languages (languages that are in currentLanguages but not in availableLanguages)
+    const predefinedLanguageIds = availableLanguages.map((lang) => lang.id);
+    const customLanguageIds = currentLanguages.filter((id) => !predefinedLanguageIds.includes(id));
+
+    // Create menu items for custom languages
+    const customLanguageItems: vscode.QuickPickItem[] = [];
+    if (customLanguageIds.length > 0) {
+      customLanguageItems.push({
+        label: '',
+        kind: vscode.QuickPickItemKind.Separator,
+        detail: 'Custom language IDs',
+      });
+
+      for (const customId of customLanguageIds) {
+        customLanguageItems.push({
+          label: `${customId} (Custom)`,
+          description: customId,
+          picked: true,
+        });
+      }
+    }
+
     const languageItems: vscode.QuickPickItem[] = [
       { label: '$(arrow-left) Back' },
       {
@@ -125,37 +210,49 @@ export class Menu {
         detail: 'Select language support',
       },
     ];
-    
+
+    // Add custom languages at the top
+    languageItems.push(...customLanguageItems);
+
+    // Add predefined languages
     for (const lang of availableLanguages) {
       languageItems.push({
-        label: `${currentLanguages.includes(lang.id) ? '$(check) ' : ''}${lang.label}`,
+        label: `${lang.label}`,
         description: lang.id,
-        picked: currentLanguages.includes(lang.id)
+        picked: currentLanguages.includes(lang.id),
       });
     }
-    
+
     const selection = await vscode.window.showQuickPick(languageItems, {
       title: 'Configure Language Support',
       placeHolder: 'Select languages to enable Bootstrap IntelliSense',
-      canPickMany: true
+      canPickMany: true,
     });
-    
+
     if (!selection) {
+      await this.showLanguageSupportMenu();
       return;
     }
-    
+
     if (selection.length === 1 && selection[0].label === '$(arrow-left) Back') {
-      await this.showMainMenu();
+      await this.showLanguageSupportMenu();
       return;
     }
-    
+
     // Filter out the "Back" option
     const selectedLanguages = selection
-      .filter(item => item.label !== '$(arrow-left) Back')
-      .map(item => item.description)
+      .filter((item) => item.label !== '$(arrow-left) Back')
+      .map((item) => item.description)
       .filter(Boolean) as string[];
-    
-    await this.statusBar.setLanguageSupport(selectedLanguages);
+
+    // Preserve custom languages if they weren't explicitly deselected
+    const selectedLanguageSet = new Set(selectedLanguages);
+    const updatedLanguages = [...selectedLanguageSet];
+
+    await this.statusBar.setLanguageSupport(updatedLanguages);
+
+    // Return to the language support menu
+    await this.showLanguageSupportMenu();
   }
 
   private async showLocalFilesMenu() {
