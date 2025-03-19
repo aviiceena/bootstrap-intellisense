@@ -1,6 +1,8 @@
 # Bootstrap IntelliSense
 
-Bootstrap IntelliSense is a Visual Studio Code extension that enhances the development experience with Bootstrap. It offers CSS class autocompletion, reducing errors and saving time for developers. This tool simplifies working with Bootstrap, making the development process more efficient and effective.
+<img src="/assets/images/banner.png"/>
+
+Bootstrap IntelliSense is a Visual Studio Code extension that enhances the development experience with Bootstrap. It offers CSS class autocompletion, hover previews, sorting classes, and the ability to choose from multiple versions of Bootstrap.
 
 This extension is inspired by the popular Tailwind CSS IntelliSense extension.
 
@@ -23,17 +25,29 @@ Enter a class name and the extension will suggest matching CSS classes, if not t
 
 <img src="/assets/images/autocomplete.png"/>
 
-### Detailed CSS Insights
+### Class Hover Preview
 
-View complete CSS details for Bootstrap class names.
+Just hover over a class name to see a preview of the CSS properties.
 
-<img src="/assets/images/css-details.png"/>
+<img src="/assets/images/css-hover-preview.png"/>
 
-### Bootstrap Version Detection
+### Choose your Bootstrap version
 
-Display the Bootstrap version used in the project.
+Select the Bootstrap version you are using in your project.
 
 <img src="/assets/images/bootsrap-version.png"/>
+
+### Sorting Classes
+
+Sort Bootstrap classes with `ctrl + s`
+
+<img src="/assets/images/sort.png"/>
+
+### Add Custom Language Support
+
+Add custom language support for Bootstrap classes.
+
+<img src="/assets/images/custom-language-support.png"/>
 
 ## Known Issues
 

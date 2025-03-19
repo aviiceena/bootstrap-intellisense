@@ -1,135 +1,165 @@
 import * as vscode from 'vscode';
-import { createStatusBarItem, showMainMenu, isExtensionActive, subscribeToExtensionStatus } from './statusBar';
-import { getClasses } from './bootstrap';
+import { StatusBar } from './features/statusBar/statusBar';
+import { Menu } from './features/menu/menu';
+import { CompletionProvider, languageSupport, updateLanguageSupport } from './features/completion/completionProvider';
+import { HoverProvider } from './features/hover/hoverProvider';
+import { BootstrapFormatter } from './features/formatter/bootstrapFormatter';
+import { Container } from './core/container';
+import { Config } from './core/config';
 
-let statusBarItem: vscode.StatusBarItem;
-let completionProvider: vscode.Disposable | undefined;
-const languageSupport = [
-  'html',
-  'php',
-  'handlebars',
-  'javascript',
-  'javascriptreact',
-  'typescript',
-  'typescriptreact',
-  'vue',
-  'vue-html',
-  'svelte',
-  'astro',
-  'twig',
-  'erb',
-  'django-html',
-  'blade',
-  'razor',
-  'ejs',
-  'markdown',
-  'css',
-  'scss',
-  'sass',
-  'less',
-  'stylus',
-  'jade',
-  'pug',
-  'haml',
-  'slim',
-  'liquid',
-  'edge',
-  'jinja',
-  'j2',
-  'asp',
-  'jinja-html',
-  'jar',
-  'lava',
-  'glimmer-js',
-  'glimmer-ts',
-];
+let completionProvider: CompletionProvider | undefined;
+let hoverProvider: HoverProvider | undefined;
+let formatter: BootstrapFormatter | undefined;
+let formatterDisposables: vscode.Disposable[] = [];
+const container = Container.getInstance();
+const config = Config.getInstance();
 
-const provideCompletionItems = (
-  document: vscode.TextDocument,
-  position: vscode.Position,
-): Promise<vscode.CompletionItem[]> | undefined => {
-  const classRegex = /class(?:Name)?\s*=\s*['"]([^'"]*)$/;
-
-  if (isExtensionActive) {
-    {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const lineText = document.lineAt(position.line).text;
-          const textBeforeCursor = lineText.slice(0, position.character);
-
-          const matches = classRegex.exec(textBeforeCursor);
-          if (!matches || !matches[1]) {
-            resolve([]);
-            return;
-          }
-
-          const usedClasses = (matches[1] || '').split(' ').filter((cls) => cls.trim() !== '');
-          const availableClasses = (await getClasses()) || [];
-
-          const completionItems = availableClasses
-            .filter(({ className }) => !usedClasses.includes(className))
-            .map(({ className, classProperties }) => {
-              const item = new vscode.CompletionItem(className, vscode.CompletionItemKind.Value);
-              item.detail = 'Bootstrap IntelliSense';
-              item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
-              item.insertText = className;
-              return item;
-            });
-
-          resolve(completionItems);
-        } catch (error) {
-          console.error('Error in provideCompletionItems:', (error as Error).message, (error as Error).stack);
-          reject([]);
-        }
-      });
-    }
-  } else {
-    return undefined;
+// helper function to apply formatting to the document
+async function applyFormatting(document: vscode.TextDocument, formatter: BootstrapFormatter) {
+  const edits = formatter.provideDocumentFormattingEdits(document);
+  if (edits.length > 0) {
+    const edit = new vscode.WorkspaceEdit();
+    edits.forEach((e) => edit.replace(document.uri, e.range, e.newText));
+    await vscode.workspace.applyEdit(edit);
   }
-};
+}
 
-function registerCompletionProvider(context: vscode.ExtensionContext) {
+function createFormatOnSaveHandler(formatter: BootstrapFormatter, config: Config) {
+  return async (event: vscode.TextDocumentWillSaveEvent) => {
+    if (languageSupport.includes(event.document.languageId)) {
+      const bootstrapConfig = config.getBootstrapConfig();
+      if (bootstrapConfig.formatOnSave && event.reason === vscode.TextDocumentSaveReason.Manual) {
+        await applyFormatting(event.document, formatter);
+      }
+    }
+  };
+}
+
+function registerFormatter(context: vscode.ExtensionContext, formatter: BootstrapFormatter, config: Config) {
+  // Remove previous formatter registrations
+  formatterDisposables.forEach(d => d.dispose());
+  formatterDisposables = [];
+  
+  const formatterDisposable = vscode.languages.registerDocumentFormattingEditProvider(languageSupport, formatter);
+  const formatOnSaveDisposable = vscode.workspace.onWillSaveTextDocument(createFormatOnSaveHandler(formatter, config));
+  formatterDisposables.push(formatterDisposable, formatOnSaveDisposable);
+  context.subscriptions.push(formatterDisposable, formatOnSaveDisposable);
+}
+
+// Function to completely recreate all providers
+function recreateProviders(context: vscode.ExtensionContext, isActive: boolean, version: string, useLocalFile: boolean, cssFilePath: string) {
+  // Update CompletionProvider
   if (completionProvider) {
     completionProvider.dispose();
     completionProvider = undefined;
   }
 
-  if (isExtensionActive) {
-    completionProvider = vscode.languages.registerCompletionItemProvider(
-      languageSupport,
-      {
-        provideCompletionItems,
-      },
-      '"',
-      "'",
-      ' ',
+  if (isActive) {
+    completionProvider = new CompletionProvider(
+      isActive,
+      version,
+      config.get<boolean>('showSuggestions') ?? true,
+      config.get<boolean>('autoComplete') ?? true,
+      useLocalFile,
+      cssFilePath,
     );
-    context.subscriptions.push(completionProvider);
+
+    container.register('completionProvider', completionProvider);
+    completionProvider.register(context);
+
+    // Update HoverProvider
+    if (hoverProvider) {
+      hoverProvider.dispose();
+    }
+    hoverProvider = new HoverProvider(isActive, version);
+    container.register('hoverProvider', hoverProvider);
+    hoverProvider.register(context);
+
+    // Update Formatter
+    if (formatter) {
+      formatter.updateConfig(isActive);
+      registerFormatter(context, formatter, config);
+    }
   }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  statusBarItem = createStatusBarItem();
-  context.subscriptions.push(statusBarItem);
+  // Register core dependencies
+  container.register('context', context);
+  container.register('config', config);
 
-  let mainMenuCommand: vscode.Disposable = vscode.commands.registerCommand(
-    'bootstrap-intelliSense.showMainMenu',
-    async () => {
-      await showMainMenu(statusBarItem);
-    },
-  );
+  const bootstrapConfig = config.getBootstrapConfig();
+  
+  // Initialize language support from settings
+  updateLanguageSupport(bootstrapConfig.languageSupport);
 
-  context.subscriptions.push(mainMenuCommand);
+  // Initialize features
+  const statusBar = new StatusBar();
+  const menu = new Menu(statusBar);
+  formatter = new BootstrapFormatter();
 
-  registerCompletionProvider(context);
+  container.register('statusBar', statusBar);
+  container.register('menu', menu);
+  container.register('formatter', formatter);
 
-  subscribeToExtensionStatus((isActive: boolean) => {
-    registerCompletionProvider(context);
+  if (bootstrapConfig.isActive) {
+    // Initialize providers with current configuration
+    recreateProviders(
+      context,
+      bootstrapConfig.isActive ?? true,
+      bootstrapConfig.version,
+      bootstrapConfig.useLocalFile ?? false,
+      bootstrapConfig.cssFilePath ?? ''
+    );
+  }
+
+  // Subscribe to status changes
+  statusBar.subscribe((isActive, useLocalFile, cssFilePath, version, languageSupportList) => {
+    // Update language support
+    updateLanguageSupport(languageSupportList);
+    
+    // Recreate all providers
+    recreateProviders(context, isActive, version, useLocalFile, cssFilePath);
   });
+
+  // Register commands and configuration change handler
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bootstrap-intelliSense.showMainMenu', async () => {
+      const menu = container.get<Menu>('menu');
+      await menu.showMainMenu();
+    }),
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration('bootstrapIntelliSense')) {
+        const newConfig = config.getBootstrapConfig();
+        
+        // Update language support from settings
+        updateLanguageSupport(newConfig.languageSupport);
+
+        // Recreate all providers
+        recreateProviders(
+          context,
+          newConfig.isActive ?? true,
+          newConfig.version,
+          newConfig.useLocalFile ?? false,
+          newConfig.cssFilePath ?? ''
+        );
+      }
+    }),
+    statusBar,
+  );
 }
 
 export function deactivate() {
+  formatterDisposables.forEach(d => d.dispose());
+  formatterDisposables = [];
+  
   if (completionProvider) {
     completionProvider.dispose();
+    completionProvider = undefined;
   }
+  if (hoverProvider) {
+    hoverProvider.dispose();
+    hoverProvider = undefined;
+  }
+  container.clear();
 }
