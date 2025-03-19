@@ -58,7 +58,7 @@ export class StatusBar {
   private createStatusBarItem(): vscode.StatusBarItem {
     const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     item.text = this.getStatusBarText();
-    item.tooltip = this.getStatusBarTooltip();
+    item.tooltip = "Click to open main menu"
     item.command = 'bootstrap-intelliSense.showMainMenu';
     item.show();
     return item;
@@ -71,12 +71,6 @@ export class StatusBar {
     return `${statusIcon} Bootstrap${versionText}${localFileText}`;
   }
 
-  private getStatusBarTooltip(): string {
-    const status = this.isActive ? 'active' : 'inactive';
-    const version = this.bootstrapVersion !== '0' ? ` Version ${this.bootstrapVersion}` : '';
-    const localFile = this.useLocalFile ? `\nUsing local file: ${this.cssFilePath}` : '';
-    return `Bootstrap IntelliSense is ${status}${version}${localFile}\nClick to open main menu`;
-  }
 
   public subscribe(callback: (isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string) => void) {
     this.callbacks.push(callback);
@@ -214,7 +208,6 @@ export class StatusBar {
 
   private updateStatusBarText() {
     this.item.text = this.getStatusBarText();
-    this.item.tooltip = this.getStatusBarTooltip();
   }
 
   public dispose() {
