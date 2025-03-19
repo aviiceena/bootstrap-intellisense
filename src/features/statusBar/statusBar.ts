@@ -6,7 +6,8 @@ export class StatusBar {
   private bootstrapVersion: string = '0';
   private useLocalFile: boolean = false;
   private cssFilePath: string = '';
-  private callbacks: ((isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string) => void)[] = [];
+  private languageSupport: string[] = [];
+  private callbacks: ((isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string, languageSupport: string[]) => void)[] = [];
 
   constructor() {
     this.loadSettings();
@@ -14,7 +15,7 @@ export class StatusBar {
   }
 
   private normalizePath(path: string): string {
-    // Konvertiere alle Backslashes zu Forward-Slashes
+    // Convert all backslashes to forward slashes
     return path.replace(/\\/g, '/');
   }
 
@@ -26,17 +27,20 @@ export class StatusBar {
         bsVersion: string;
         useLocalFile: boolean;
         cssFilePath: string;
+        languageSupport: string[];
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
       this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.3';
       this.useLocalFile = bootstrapConfig?.useLocalFile ?? false;
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
+      this.languageSupport = bootstrapConfig?.languageSupport ?? [];
     } catch (error) {
       this.isActive = true;
       this.bootstrapVersion = '5.3.3';
       this.useLocalFile = false;
       this.cssFilePath = '';
+      this.languageSupport = [];
     }
   }
 
@@ -48,6 +52,7 @@ export class StatusBar {
         bsVersion: this.bootstrapVersion,
         useLocalFile: this.useLocalFile,
         cssFilePath: this.cssFilePath,
+        languageSupport: this.languageSupport,
       };
       await config.update('bootstrapIntelliSense', settings, vscode.ConfigurationTarget.Global);
     } catch (error) {
@@ -58,7 +63,7 @@ export class StatusBar {
   private createStatusBarItem(): vscode.StatusBarItem {
     const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     item.text = this.getStatusBarText();
-    item.tooltip = "Click to open main menu"
+    item.tooltip = 'Click to open main menu';
     item.command = 'bootstrap-intelliSense.showMainMenu';
     item.show();
     return item;
@@ -71,8 +76,7 @@ export class StatusBar {
     return `${statusIcon} Bootstrap${versionText}${localFileText}`;
   }
 
-
-  public subscribe(callback: (isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string) => void) {
+  public subscribe(callback: (isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string, languageSupport: string[]) => void) {
     this.callbacks.push(callback);
   }
 
@@ -92,6 +96,28 @@ export class StatusBar {
     return this.cssFilePath;
   }
 
+  public getLanguageSupport(): string[] {
+    return this.languageSupport;
+  }
+
+  public async setLanguageSupport(languages: string[]) {
+    const oldLanguages = [...this.languageSupport];
+
+    try {
+      this.languageSupport = languages;
+      await this.saveSettings();
+      
+      this.callbacks.forEach((callback) =>
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
+      );
+      
+      vscode.window.showInformationMessage('Language support settings updated successfully');
+    } catch (error) {
+      this.languageSupport = oldLanguages;
+      vscode.window.showErrorMessage('Error updating language support settings');
+    }
+  }
+
   public async toggleActive() {
     const oldStatus = this.isActive;
     this.isActive = !this.isActive;
@@ -99,7 +125,7 @@ export class StatusBar {
     try {
       await this.saveSettings();
       this.callbacks.forEach((callback) =>
-        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion),
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
       );
       this.updateStatusBarText();
 
@@ -125,14 +151,14 @@ export class StatusBar {
         try {
           deleteAllBootstrapCaches();
         } catch (cacheError) {
-          console.error('Fehler beim Löschen des Bootstrap-Caches:', cacheError);
+          console.error('Error deleting Bootstrap cache:', cacheError);
         }
       }
 
       await this.saveSettings();
       this.updateStatusBarText();
       this.callbacks.forEach((callback) =>
-        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion),
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
       );
 
       if (wasInactive) {
@@ -161,14 +187,14 @@ export class StatusBar {
         try {
           deleteAllBootstrapCaches();
         } catch (cacheError) {
-          console.error('Fehler beim Löschen des Bootstrap-Caches:', cacheError);
+          console.error('Error deleting Bootstrap cache:', cacheError);
         }
       }
 
       await this.saveSettings();
       this.updateStatusBarText();
       this.callbacks.forEach((callback) =>
-        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion),
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
       );
 
       if (wasInactive) {
@@ -197,7 +223,7 @@ export class StatusBar {
       await this.saveSettings();
       this.updateStatusBarText();
       this.callbacks.forEach((callback) =>
-        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion),
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
       );
     } catch (error) {
       this.useLocalFile = oldUseLocalFile;

@@ -1,56 +1,21 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
+import { Config } from '../../core/config';
 
-export const languageSupport = [
-  // HTML and templating languages
-  'html',
-  'php',
-  'handlebars',
-  'vue-html',
-  'django-html',
-  'blade',
-  'twig',
-  'erb',
-  'ejs',
-  'nunjucks',
-  'mustache',
-  'liquid',
-  'pug',
-  'jade',
-  'haml',
-  'slim',
-  'jinja',
-  'jinja2',
-  'jinja-html',
-  'edge',
-  'markdown',
+// Empty list as languages are now defined through settings
+export const defaultLanguageSupport: string[] = [];
 
-  // JavaScript/TypeScript
-  'javascript',
-  'javascriptreact',
-  'typescript',
-  'typescriptreact',
+// The actually active languages, loaded from settings
+export let languageSupport: string[] = [];
 
-  // Framework-specific languages
-  'angular',
-  'vue',
-  'svelte',
-  'astro',
-  'razor',
-  'cshtml',
-  'aspnetcorerazor',
-
-  // Stylesheet-languages
-  'css',
-  'scss',
-  'sass',
-  'less',
-  'stylus',
-
-  // Web Components
-  'glimmer-js',
-  'glimmer-ts',
-];
+export function updateLanguageSupport(languages?: string[]) {
+  if (languages && languages.length > 0) {
+    languageSupport = [...languages];
+  } else {
+    // Default languages supported in VSCode if no settings are present
+    languageSupport = ['php', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact'];
+  }
+}
 
 export class CompletionProvider {
   private provider: vscode.Disposable | undefined;
@@ -68,33 +33,27 @@ export class CompletionProvider {
   ) {
     this.useLocalFile = useLocalFile;
     this.cssFilePath = cssFilePath;
+
+    // DO NOT reload languages here as this could overwrite current settings
+    // Languages are already updated in extension.ts before creating the provider
   }
 
   public register(context: vscode.ExtensionContext): vscode.Disposable | undefined {
-    this.dispose();
-
-    if (!this.isActive) {
-      return undefined;
-    }
-
-    this.provider = vscode.languages.registerCompletionItemProvider(
-      languageSupport,
-      {
-        provideCompletionItems: async (document: vscode.TextDocument, position: vscode.Position) => {
-          if (!this.isActive || !this.provider) {
-            return [];
-          }
-
-          return await this.provideCompletionItems(document, position);
+    if (this.isActive && this.showSuggestions) {
+      this.provider = vscode.languages.registerCompletionItemProvider(
+        languageSupport,
+        {
+          provideCompletionItems: this.provideCompletionItems.bind(this),
         },
-      },
-      '"',
-      "'",
-      ' ',
-      '=',
-    );
-
-    return this.provider;
+        '"',
+        "'",
+        '=',
+        ' ',
+      );
+      context.subscriptions.push(this.provider);
+      return this.provider;
+    }
+    return undefined;
   }
 
   public dispose() {
@@ -111,6 +70,11 @@ export class CompletionProvider {
     }
 
     if (!this.showSuggestions) {
+      return false;
+    }
+
+    // Check if the current language is supported
+    if (!languageSupport.includes(document.languageId)) {
       return false;
     }
 

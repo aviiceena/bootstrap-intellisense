@@ -62,8 +62,100 @@ export class Menu {
         case `$(folder-library) From local files for offline use (${path.basename(this.statusBar.getCssFilePath())})`:
           await this.showLocalFilesMenu();
           break;
+        case '$(sparkle) Add language support':
+          await this.showLanguageSupportMenu();
+          break;
       }
     }
+  }
+
+  private async showLanguageSupportMenu() {
+    const currentLanguages = this.statusBar.getLanguageSupport();
+    
+    const availableLanguages = [
+      { id: 'html', label: 'HTML' },
+      { id: 'php', label: 'PHP' },
+      { id: 'handlebars', label: 'Handlebars' },
+      { id: 'vue-html', label: 'Vue HTML' },
+      { id: 'django-html', label: 'Django HTML' },
+      { id: 'blade', label: 'Blade (Laravel)' },
+      { id: 'twig', label: 'Twig' },
+      { id: 'erb', label: 'ERB (Ruby)' },
+      { id: 'ejs', label: 'EJS' },
+      { id: 'nunjucks', label: 'Nunjucks' },
+      { id: 'mustache', label: 'Mustache' },
+      { id: 'liquid', label: 'Liquid' },
+      { id: 'pug', label: 'Pug' },
+      { id: 'jade', label: 'Jade' },
+      { id: 'haml', label: 'Haml' },
+      { id: 'slim', label: 'Slim' },
+      { id: 'jinja', label: 'Jinja' },
+      { id: 'jinja2', label: 'Jinja2' },
+      { id: 'jinja-html', label: 'Jinja HTML' },
+      { id: 'edge', label: 'Edge' },
+      { id: 'markdown', label: 'Markdown' },
+      
+      { id: 'javascript', label: 'JavaScript' },
+      { id: 'javascriptreact', label: 'React (JSX)' },
+      { id: 'typescript', label: 'TypeScript' },
+      { id: 'typescriptreact', label: 'React (TSX)' },
+      
+      { id: 'angular', label: 'Angular' },
+      { id: 'vue', label: 'Vue' },
+      { id: 'svelte', label: 'Svelte' },
+      { id: 'astro', label: 'Astro' },
+      { id: 'razor', label: 'Razor' },
+      { id: 'cshtml', label: 'CSHTML' },
+      { id: 'aspnetcorerazor', label: 'ASP.NET Core Razor' },
+      
+      { id: 'css', label: 'CSS' },
+      { id: 'scss', label: 'SCSS' },
+      { id: 'sass', label: 'Sass' },
+      { id: 'less', label: 'Less' },
+      { id: 'stylus', label: 'Stylus' },
+      
+      { id: 'glimmer-js', label: 'Glimmer JS' }
+    ];
+    
+    const languageItems: vscode.QuickPickItem[] = [
+      { label: '$(arrow-left) Back' },
+      {
+        label: '',
+        kind: vscode.QuickPickItemKind.Separator,
+        detail: 'Select language support',
+      },
+    ];
+    
+    for (const lang of availableLanguages) {
+      languageItems.push({
+        label: `${currentLanguages.includes(lang.id) ? '$(check) ' : ''}${lang.label}`,
+        description: lang.id,
+        picked: currentLanguages.includes(lang.id)
+      });
+    }
+    
+    const selection = await vscode.window.showQuickPick(languageItems, {
+      title: 'Configure Language Support',
+      placeHolder: 'Select languages to enable Bootstrap IntelliSense',
+      canPickMany: true
+    });
+    
+    if (!selection) {
+      return;
+    }
+    
+    if (selection.length === 1 && selection[0].label === '$(arrow-left) Back') {
+      await this.showMainMenu();
+      return;
+    }
+    
+    // Filter out the "Back" option
+    const selectedLanguages = selection
+      .filter(item => item.label !== '$(arrow-left) Back')
+      .map(item => item.description)
+      .filter(Boolean) as string[];
+    
+    await this.statusBar.setLanguageSupport(selectedLanguages);
   }
 
   private async showLocalFilesMenu() {

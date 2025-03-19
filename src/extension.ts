@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { StatusBar } from './features/statusBar/statusBar';
 import { Menu } from './features/menu/menu';
-import { CompletionProvider, languageSupport } from './features/completion/completionProvider';
+import { CompletionProvider, languageSupport, updateLanguageSupport } from './features/completion/completionProvider';
 import { HoverProvider } from './features/hover/hoverProvider';
 import { BootstrapFormatter } from './features/formatter/bootstrapFormatter';
 import { Container } from './core/container';
@@ -10,6 +10,7 @@ import { Config } from './core/config';
 let completionProvider: CompletionProvider | undefined;
 let hoverProvider: HoverProvider | undefined;
 let formatter: BootstrapFormatter | undefined;
+let formatterDisposables: vscode.Disposable[] = [];
 const container = Container.getInstance();
 const config = Config.getInstance();
 
@@ -35,9 +36,51 @@ function createFormatOnSaveHandler(formatter: BootstrapFormatter, config: Config
 }
 
 function registerFormatter(context: vscode.ExtensionContext, formatter: BootstrapFormatter, config: Config) {
+  // Remove previous formatter registrations
+  formatterDisposables.forEach(d => d.dispose());
+  formatterDisposables = [];
+  
   const formatterDisposable = vscode.languages.registerDocumentFormattingEditProvider(languageSupport, formatter);
   const formatOnSaveDisposable = vscode.workspace.onWillSaveTextDocument(createFormatOnSaveHandler(formatter, config));
+  formatterDisposables.push(formatterDisposable, formatOnSaveDisposable);
   context.subscriptions.push(formatterDisposable, formatOnSaveDisposable);
+}
+
+// Function to completely recreate all providers
+function recreateProviders(context: vscode.ExtensionContext, isActive: boolean, version: string, useLocalFile: boolean, cssFilePath: string) {
+  // Update CompletionProvider
+  if (completionProvider) {
+    completionProvider.dispose();
+    completionProvider = undefined;
+  }
+
+  if (isActive) {
+    completionProvider = new CompletionProvider(
+      isActive,
+      version,
+      config.get<boolean>('showSuggestions') ?? true,
+      config.get<boolean>('autoComplete') ?? true,
+      useLocalFile,
+      cssFilePath,
+    );
+
+    container.register('completionProvider', completionProvider);
+    completionProvider.register(context);
+
+    // Update HoverProvider
+    if (hoverProvider) {
+      hoverProvider.dispose();
+    }
+    hoverProvider = new HoverProvider(isActive, version);
+    container.register('hoverProvider', hoverProvider);
+    hoverProvider.register(context);
+
+    // Update Formatter
+    if (formatter) {
+      formatter.updateConfig(isActive);
+      registerFormatter(context, formatter, config);
+    }
+  }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -46,6 +89,9 @@ export async function activate(context: vscode.ExtensionContext) {
   container.register('config', config);
 
   const bootstrapConfig = config.getBootstrapConfig();
+  
+  // Initialize language support from settings
+  updateLanguageSupport(bootstrapConfig.languageSupport);
 
   // Initialize features
   const statusBar = new StatusBar();
@@ -58,61 +104,22 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (bootstrapConfig.isActive) {
     // Initialize providers with current configuration
-    completionProvider = new CompletionProvider(
-      bootstrapConfig.isActive,
+    recreateProviders(
+      context,
+      bootstrapConfig.isActive ?? true,
       bootstrapConfig.version,
-      bootstrapConfig.showSuggestions,
-      bootstrapConfig.autoComplete,
-      bootstrapConfig.useLocalFile,
-      bootstrapConfig.cssFilePath,
+      bootstrapConfig.useLocalFile ?? false,
+      bootstrapConfig.cssFilePath ?? ''
     );
-
-    hoverProvider = new HoverProvider(bootstrapConfig.isActive, bootstrapConfig.version);
-
-    container.register('completionProvider', completionProvider);
-    container.register('hoverProvider', hoverProvider);
-
-    completionProvider.register(context);
-    hoverProvider.register(context);
-
-    registerFormatter(context, formatter, config);
   }
 
   // Subscribe to status changes
-  statusBar.subscribe((isActive, useLocalFile, cssFilePath, version) => {
-    // Explicitly update CompletionProvider with current configuration
-    if (completionProvider) {
-      completionProvider.dispose();
-      completionProvider = undefined;
-    }
-
-    if (isActive) {
-      completionProvider = new CompletionProvider(
-        isActive,
-        version,
-        config.get<boolean>('showSuggestions') ?? true,
-        config.get<boolean>('autoComplete') ?? true,
-        useLocalFile,
-        cssFilePath,
-      );
-
-      container.register('completionProvider', completionProvider);
-      completionProvider.register(context);
-
-      if (hoverProvider) {
-        hoverProvider.dispose();
-      }
-      hoverProvider = new HoverProvider(isActive, version);
-      container.register('hoverProvider', hoverProvider);
-      hoverProvider.register(context);
-    }
-
-    if (formatter) {
-      formatter.updateConfig(isActive);
-      if (isActive) {
-        registerFormatter(context, formatter, config);
-      }
-    }
+  statusBar.subscribe((isActive, useLocalFile, cssFilePath, version, languageSupportList) => {
+    // Update language support
+    updateLanguageSupport(languageSupportList);
+    
+    // Recreate all providers
+    recreateProviders(context, isActive, version, useLocalFile, cssFilePath);
   });
 
   // Register commands and configuration change handler
@@ -124,37 +131,18 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration('bootstrapIntelliSense')) {
         const newConfig = config.getBootstrapConfig();
+        
+        // Update language support from settings
+        updateLanguageSupport(newConfig.languageSupport);
 
-        // Recreate providers with the new configuration
-        if (completionProvider) {
-          completionProvider.dispose();
-          completionProvider = undefined;
-        }
-
-        if (newConfig.isActive) {
-          completionProvider = new CompletionProvider(
-            newConfig.isActive,
-            newConfig.version,
-            newConfig.showSuggestions,
-            newConfig.autoComplete,
-            newConfig.useLocalFile,
-            newConfig.cssFilePath,
-          );
-
-          container.register('completionProvider', completionProvider);
-          completionProvider.register(context);
-
-          if (hoverProvider) {
-            hoverProvider.dispose();
-          }
-          hoverProvider = new HoverProvider(newConfig.isActive, newConfig.version);
-          container.register('hoverProvider', hoverProvider);
-          hoverProvider.register(context);
-        }
-
-        if (formatter) {
-          formatter.updateConfig(newConfig.isActive);
-        }
+        // Recreate all providers
+        recreateProviders(
+          context,
+          newConfig.isActive ?? true,
+          newConfig.version,
+          newConfig.useLocalFile ?? false,
+          newConfig.cssFilePath ?? ''
+        );
       }
     }),
     statusBar,
@@ -162,6 +150,9 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
+  formatterDisposables.forEach(d => d.dispose());
+  formatterDisposables = [];
+  
   if (completionProvider) {
     completionProvider.dispose();
     completionProvider = undefined;
