@@ -39,6 +39,17 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     return '4-other';
   }
 
+  private splitClassesPreservingTemplates(classNames: string) {
+    // Pattern to match valid CSS class names and various template syntax
+    // This regex identifies:
+    // 1. Valid CSS class names (alphanumeric, hyphens, underscores)
+    // 2. Template expressions like {{...}}, {%...%}, <?...?>, etc.
+    const pattern = /\{\{[^}]*\}\}|<\?[^?]*\?>|\{%[^%]*%\}|[a-zA-Z0-9_-]+/g;
+
+    const matches = classNames.match(pattern) || [];
+    return matches.map(c => c.trim()).filter(Boolean);
+  }
+
   private sortBootstrapClasses(classNames: string): string {
     // Skip if empty
     if (!classNames || !classNames.trim()) {
@@ -48,10 +59,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     // Split classes, remove empty entries and deduplicate
     const uniqueClasses = Array.from(
       new Set(
-        classNames
-          .split(/\s+/)
-          .map(c => c.trim())
-          .filter(Boolean)
+        this.splitClassesPreservingTemplates(classNames)
       )
     );
     
