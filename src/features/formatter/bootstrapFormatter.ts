@@ -44,7 +44,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     // This regex identifies:
     // 1. Valid CSS class names (alphanumeric, hyphens, underscores)
     // 2. Template expressions like {{...}}, {%...%}, <?...?>, etc.
-    const pattern = /\{\{[^}]*\}\}|<\?[^?]*\?>|\{%[^%]*%\}|[a-zA-Z0-9_-]+/g;
+    const pattern = /\{\{.*?\}\}|\<\?.*?\?\>|\{%.*?%\}|[a-zA-Z0-9_-]+/g;
 
     const matches = classNames.match(pattern) || [];
     return matches.map(c => c.trim()).filter(Boolean);
