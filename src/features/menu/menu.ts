@@ -386,6 +386,8 @@ export class Menu {
       { label: '$(add) Bootstrap 5.2.2' },
       { label: '$(add) Bootstrap 5.2.1' },
       { label: '$(add) Bootstrap 5.2.0' },
+      { label: '$(add) Bootstrap 5.1.3' },
+      { label: '$(add) Bootstrap 5.0.2' },
     ];
 
     const versionSelection = await vscode.window.showQuickPick(version5Options, {
