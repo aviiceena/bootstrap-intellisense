@@ -1,5 +1,10 @@
 # Change Log
 
+## v3.0.2 2025-03-20
+
+- added two bootstrap versions 5.1.3 and 5.0.2
+- removed sorting of classes with `Ctrl + S`
+
 ## v3.0.1 2025-03-19
 
 - Fixed minor bugs
