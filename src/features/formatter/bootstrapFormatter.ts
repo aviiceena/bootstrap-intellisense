@@ -44,7 +44,7 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
     // This regex identifies:
     // 1. Valid CSS class names (alphanumeric, hyphens, underscores)
     // 2. Template expressions like {{...}}, {%...%}, <?...?>, etc.
-    const pattern = /\{\{.*?\}\}|\<\?.*?\?\>|\{%.*?%\}|[a-zA-Z0-9_-]+/g;
+    const pattern = /[a-zA-Z0-9_-]+(?:\{\{.*?\}\}|\<\?=?\s*.*?\s*\?>|\{%.*?%\})?|\{\{.*?\}\}|\<\?=?\s*.*?\s*\?>|\{%.*?%\}/g;
 
     const matches = classNames.match(pattern) || [];
     return matches.map(c => c.trim()).filter(Boolean);
@@ -95,19 +95,18 @@ export class BootstrapFormatter implements vscode.DocumentFormattingEditProvider
         const line = document.lineAt(i);
         const text = line.text;
 
-        // Improved regex for class attributes - handles more valid HTML scenarios
-        const classRegex = /\bclass(?:Name)?=["']([^"']*)["']/g;
-        let match;
-
-        while ((match = classRegex.exec(text)) !== null) {
-          const fullMatch = match[0];
-          const classContent = match[1];
+        // Yet more improved class(Name) regex
+        const classRegex = /(class|className)=(["'])(.*?)\2/;
+        const classContentMatches = text.match(classRegex);
+        if (classContentMatches && classContentMatches.index && classContentMatches.length >= 4) {
+          const fullMatch = classContentMatches[0];
+          const classContent = classContentMatches[3];
           const sortedClasses = this.sortBootstrapClasses(classContent);
 
           // Only replace if something has changed
           if (sortedClasses !== classContent) {
-            const startPos = new vscode.Position(i, match.index);
-            const endPos = new vscode.Position(i, match.index + fullMatch.length);
+            const startPos = new vscode.Position(i, classContentMatches.index);
+            const endPos = new vscode.Position(i, classContentMatches.index + fullMatch.length);
             const range = new vscode.Range(startPos, endPos);
 
             // Use the same quote as in the original
