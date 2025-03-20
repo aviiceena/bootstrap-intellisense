@@ -64,11 +64,6 @@
           },
           "description": "Bootstrap IntelliSense configuration"
         },
-        "bootstrapIntelliSense.formatOnSave": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically sort Bootstrap classes when saving a file"
-        },
         "bootstrapIntelliSense.version": {
           "type": "string",
           "default": "5.3.3",
