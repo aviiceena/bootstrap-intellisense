@@ -37,12 +37,6 @@ Select the Bootstrap version you are using in your project.
 
 <img src="/assets/images/bootsrap-version.png"/>
 
-### Sorting Classes
-
-Sort Bootstrap classes with `ctrl + s`
-
-<img src="/assets/images/sort.png"/>
-
 ### Add Custom Language Support
 
 Add custom language support for Bootstrap classes.
