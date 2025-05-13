@@ -2,8 +2,20 @@ import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { Config } from '../../core/config';
 
-// Empty list as languages are now defined through settings
-export const defaultLanguageSupport: string[] = [];
+// Default languages supported if no user settings are present
+export const defaultLanguageSupport: string[] = [
+  'html',
+  'css',
+  'php',
+  'javascript',
+  'javascriptreact',
+  'typescript',
+  'typescriptreact',
+  'vue',
+  'svelte',
+  'handlebars',
+  'razor',
+];
 
 // The actually active languages, loaded from settings
 export let languageSupport: string[] = [];
@@ -12,20 +24,8 @@ export function updateLanguageSupport(languages?: string[]) {
   if (languages && languages.length > 0) {
     languageSupport = [...languages];
   } else {
-    // Default languages supported in VSCode if no settings are present
-    languageSupport = [
-      'html',
-      'css',
-      'php',
-      'javascript',
-      'javascriptreact',
-      'typescript',
-      'typescriptreact',
-      'vue',
-      'svelte',
-      'handlebars',
-      'razor',
-    ];
+    // Use the defined default languages if no settings are present
+    languageSupport = [...defaultLanguageSupport];
   }
 }
 

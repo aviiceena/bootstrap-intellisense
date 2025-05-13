@@ -7,7 +7,13 @@ export class StatusBar {
   private useLocalFile: boolean = false;
   private cssFilePath: string = '';
   private languageSupport: string[] = [];
-  private callbacks: ((isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string, languageSupport: string[]) => void)[] = [];
+  private callbacks: ((
+    isActive: boolean,
+    useLocalFile: boolean,
+    cssFilePath: string,
+    version: string,
+    languageSupport: string[],
+  ) => void)[] = [];
 
   constructor() {
     this.loadSettings();
@@ -31,13 +37,13 @@ export class StatusBar {
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
-      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.3';
+      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.6';
       this.useLocalFile = bootstrapConfig?.useLocalFile ?? false;
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
     } catch (error) {
       this.isActive = true;
-      this.bootstrapVersion = '5.3.3';
+      this.bootstrapVersion = '5.3.6';
       this.useLocalFile = false;
       this.cssFilePath = '';
       this.languageSupport = [];
@@ -76,7 +82,15 @@ export class StatusBar {
     return `${statusIcon} Bootstrap${versionText}${localFileText}`;
   }
 
-  public subscribe(callback: (isActive: boolean, useLocalFile: boolean, cssFilePath: string, version: string, languageSupport: string[]) => void) {
+  public subscribe(
+    callback: (
+      isActive: boolean,
+      useLocalFile: boolean,
+      cssFilePath: string,
+      version: string,
+      languageSupport: string[],
+    ) => void,
+  ) {
     this.callbacks.push(callback);
   }
 
@@ -106,11 +120,11 @@ export class StatusBar {
     try {
       this.languageSupport = languages;
       await this.saveSettings();
-      
+
       this.callbacks.forEach((callback) =>
         callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
       );
-      
+
       vscode.window.showInformationMessage('Language support settings updated successfully');
     } catch (error) {
       this.languageSupport = oldLanguages;

@@ -2,9 +2,49 @@ import * as vscode from 'vscode';
 import { StatusBar } from '../statusBar/statusBar';
 import { findBootstrapCssFiles, readLocalCssFile, extractBootstrapVersion } from '../../core/bootstrap';
 import * as path from 'path';
+import * as fs from 'fs';
+
+// Typdefinition für die Struktur der JSON-Datei
+interface BootstrapVersions {
+  [major: string]: string[]; // z.B. "v5": ["5.3.3", ...]
+}
 
 export class Menu {
-  constructor(private statusBar: StatusBar) {}
+  private bootstrapVersions: BootstrapVersions | null = null;
+
+  constructor(private statusBar: StatusBar) {
+    this.loadVersions(); // Versionen beim Initialisieren laden
+  }
+
+  private loadVersions() {
+    try {
+      // __dirname ist im Kontext von VS Code Erweiterungen nicht immer zuverlässig für den Zugriff auf gepackte Assets.
+      // vscode.extensions.getExtension('YOUR_EXTENSION_ID').extensionPath ist der empfohlene Weg.
+      // Bitte ersetze 'Hossaini.bootstrap-intellisense' mit deiner tatsächlichen Extension ID aus package.json
+      const extension = vscode.extensions.getExtension('Hossaini.bootstrap-intellisense');
+      if (extension) {
+        const versionsPath = path.join(extension.extensionPath, 'assets', 'bootstrap-versions.json');
+        if (fs.existsSync(versionsPath)) {
+          const fileContent = fs.readFileSync(versionsPath, 'utf-8');
+          this.bootstrapVersions = JSON.parse(fileContent) as BootstrapVersions;
+        } else {
+          vscode.window.showErrorMessage(
+            'bootstrap-versions.json not found in assets folder. Please ensure it exists.',
+          );
+          this.bootstrapVersions = null; // Fallback
+          console.error(`bootstrap-versions.json not found at ${versionsPath}`);
+        }
+      } else {
+        vscode.window.showErrorMessage('Could not determine extension path. Bootstrap versions cannot be loaded.');
+        console.warn('Could not determine extension path to load bootstrap-versions.json');
+        this.bootstrapVersions = null;
+      }
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`Error loading or parsing bootstrap-versions.json: ${error.message}`);
+      console.error('Error loading bootstrap versions:', error);
+      this.bootstrapVersions = null; // Fallback
+    }
+  }
 
   public async showMainMenu() {
     const isUsingLocalFile = this.statusBar.getUseLocalFile();
@@ -192,21 +232,21 @@ export class Menu {
       allLanguageItems.push({
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
-        detail: 'Custom language IDs'
+        detail: 'Custom language IDs',
       });
 
       for (const customId of customLanguageIds) {
         allLanguageItems.push({
           label: `${customId} (Custom)`,
           description: customId,
-          picked: true
+          picked: true,
         });
       }
 
       allLanguageItems.push({
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
-        detail: 'Predefined languages'
+        detail: 'Predefined languages',
       });
     }
 
@@ -233,10 +273,8 @@ export class Menu {
     }
 
     // Map selected languages
-    const selectedLanguages = selection
-      .map((item) => item.description)
-      .filter(Boolean) as string[];
-    
+    const selectedLanguages = selection.map((item) => item.description).filter(Boolean) as string[];
+
     // Preserve custom languages if they weren't explicitly deselected
     const selectedLanguageSet = new Set(selectedLanguages);
     const updatedLanguages = [...selectedLanguageSet];
@@ -336,6 +374,8 @@ export class Menu {
   }
 
   private async showBootstrapVersionMenu() {
+    // Die Hauptversionen könnten auch dynamisch aus this.bootstrapVersions.keys() generiert werden,
+    // aber wir behalten das bestehende Menü für Hauptversionen bei, da es übersichtlich ist.
     const bootstrapMajorOptions: vscode.QuickPickItem[] = [
       { label: '$(arrow-left) Back' },
       {
@@ -356,43 +396,55 @@ export class Menu {
       if (majorSelection.label === '$(arrow-left) Back') {
         this.showMainMenu();
       } else {
-        switch (majorSelection.label) {
-          case '$(versions) Bootstrap 5':
-            await this.showBootstrap5VersionMenu();
-            break;
-          case '$(versions) Bootstrap 4':
-            await this.showBootstrap4VersionMenu();
-            break;
-          case '$(versions) Bootstrap 3':
-            await this.showBootstrap3VersionMenu();
-            break;
+        // Wir leiten den Major-Key für unsere JSON-Datei ab
+        let majorKey = '';
+        if (majorSelection.label.includes('Bootstrap 5')) {
+          majorKey = 'v5';
+        } else if (majorSelection.label.includes('Bootstrap 4')) {
+          majorKey = 'v4';
+        } else if (majorSelection.label.includes('Bootstrap 3')) {
+          majorKey = 'v3';
+        }
+
+        if (majorKey && this.bootstrapVersions && this.bootstrapVersions[majorKey]) {
+          await this.showSpecificBootstrapVersionMenu(majorKey);
+        } else if (majorKey) {
+          vscode.window.showErrorMessage(
+            `Could not find versions for ${majorSelection.label}. Check bootstrap-versions.json.`,
+          );
+          await this.showBootstrapVersionMenu(); // Stay on the same menu or go back
+        } else {
+          // Should not happen if labels are correct
+          await this.showBootstrapVersionMenu();
         }
       }
     }
   }
 
-  private async showBootstrap5VersionMenu() {
-    const version5Options: vscode.QuickPickItem[] = [
+  // Eine neue generische Methode, um die spezifischen Versionsmenüs zu erstellen
+  private async showSpecificBootstrapVersionMenu(majorKey: string) {
+    if (!this.bootstrapVersions || !this.bootstrapVersions[majorKey]) {
+      // This case should ideally be caught by the check in showBootstrapVersionMenu
+      vscode.window.showErrorMessage(
+        `No versions found for Bootstrap ${majorKey.substring(1)} in bootstrap-versions.json.`,
+      );
+      await this.showBootstrapVersionMenu(); // Zurück zum Hauptversionsmenü
+      return;
+    }
+
+    const versions = this.bootstrapVersions[majorKey];
+    const versionOptions: vscode.QuickPickItem[] = [
       { label: '$(arrow-left) Back' },
       {
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
       },
-      { label: '$(add) Bootstrap 5.3.3' },
-      { label: '$(add) Bootstrap 5.3.2' },
-      { label: '$(add) Bootstrap 5.3.1' },
-      { label: '$(add) Bootstrap 5.3.0' },
-      { label: '$(add) Bootstrap 5.2.3' },
-      { label: '$(add) Bootstrap 5.2.2' },
-      { label: '$(add) Bootstrap 5.2.1' },
-      { label: '$(add) Bootstrap 5.2.0' },
-      { label: '$(add) Bootstrap 5.1.3' },
-      { label: '$(add) Bootstrap 5.0.2' },
+      ...versions.map((version) => ({ label: `$(add) Bootstrap ${version}` })),
     ];
 
-    const versionSelection = await vscode.window.showQuickPick(version5Options, {
-      title: 'Select Bootstrap 5 version',
-      placeHolder: 'Choose a version of Bootstrap 5',
+    const versionSelection = await vscode.window.showQuickPick(versionOptions, {
+      title: `Select Bootstrap ${majorKey.substring(1)} version`,
+      placeHolder: `Choose a version of Bootstrap ${majorKey.substring(1)}`,
     });
 
     if (versionSelection) {
@@ -405,87 +457,9 @@ export class Menu {
           vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
         }
       }
-    }
-  }
-
-  private async showBootstrap4VersionMenu() {
-    const version4Options: vscode.QuickPickItem[] = [
-      { label: '$(arrow-left) Back' },
-      {
-        label: '',
-        kind: vscode.QuickPickItemKind.Separator,
-      },
-      { label: '$(add) Bootstrap 4.6.1' },
-      { label: '$(add) Bootstrap 4.6.0' },
-      { label: '$(add) Bootstrap 4.5.3' },
-      { label: '$(add) Bootstrap 4.5.2' },
-      { label: '$(add) Bootstrap 4.5.1' },
-      { label: '$(add) Bootstrap 4.5.0' },
-      { label: '$(add) Bootstrap 4.4.1' },
-      { label: '$(add) Bootstrap 4.4.0' },
-      { label: '$(add) Bootstrap 4.3.1' },
-      { label: '$(add) Bootstrap 4.3.0' },
-      { label: '$(add) Bootstrap 4.2.1' },
-      { label: '$(add) Bootstrap 4.1.3' },
-      { label: '$(add) Bootstrap 4.1.2' },
-      { label: '$(add) Bootstrap 4.1.1' },
-      { label: '$(add) Bootstrap 4.0.0' },
-    ];
-
-    const versionSelection = await vscode.window.showQuickPick(version4Options, {
-      title: 'Select Bootstrap 4 version',
-      placeHolder: 'Choose a version of Bootstrap 4',
-    });
-
-    if (versionSelection) {
-      if (versionSelection.label === '$(arrow-left) Back') {
-        await this.showBootstrapVersionMenu();
-      } else {
-        const versionNumber = versionSelection.label.split(' ').pop();
-        if (versionNumber) {
-          await this.statusBar.setBootstrapVersion(versionNumber);
-          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
-        }
-      }
-    }
-  }
-
-  private async showBootstrap3VersionMenu() {
-    const version3Options: vscode.QuickPickItem[] = [
-      { label: '$(arrow-left) Back' },
-      {
-        label: '',
-        kind: vscode.QuickPickItemKind.Separator,
-      },
-      { label: '$(add) Bootstrap 3.4.1' },
-      { label: '$(add) Bootstrap 3.4.0' },
-      { label: '$(add) Bootstrap 3.3.7' },
-      { label: '$(add) Bootstrap 3.3.6' },
-      { label: '$(add) Bootstrap 3.3.5' },
-      { label: '$(add) Bootstrap 3.3.4' },
-      { label: '$(add) Bootstrap 3.3.3' },
-      { label: '$(add) Bootstrap 3.3.2' },
-      { label: '$(add) Bootstrap 3.3.1' },
-      { label: '$(add) Bootstrap 3.3.0' },
-      { label: '$(add) Bootstrap 3.2.0' },
-      { label: '$(add) Bootstrap 3.1.1' },
-    ];
-
-    const versionSelection = await vscode.window.showQuickPick(version3Options, {
-      title: 'Select Bootstrap 3 version',
-      placeHolder: 'Choose a version of Bootstrap 3',
-    });
-
-    if (versionSelection) {
-      if (versionSelection.label === '$(arrow-left) Back') {
-        await this.showBootstrapVersionMenu();
-      } else {
-        const versionNumber = versionSelection.label.split(' ').pop();
-        if (versionNumber) {
-          await this.statusBar.setBootstrapVersion(versionNumber);
-          vscode.window.showInformationMessage(`Bootstrap version set to v${versionNumber}`);
-        }
-      }
+    } else {
+      // User cancelled (pressed Esc), go back to the major version selection menu
+      await this.showBootstrapVersionMenu();
     }
   }
 }

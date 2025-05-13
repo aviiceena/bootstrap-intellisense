@@ -1,5 +1,12 @@
 # Change Log
 
+## v3.0.3 2025-05-13
+
+- Added: Dynamic loading of Bootstrap versions from `assets/bootstrap-versions.json` for the version selection menu.
+- Fixed: Improved accuracy of hover provider for Bootstrap classes, correctly identifying classes within `class` or `className` attributes, especially when multiple classes are present.
+- NEW: Added new Bootstrap versions `5.3.6`, `5.3.5` and `5.3.4` to the version selection menu.
+- Minor bug fixes.
+
 ## v3.0.2 2025-03-20
 
 - added two bootstrap versions 5.1.3 and 5.0.2

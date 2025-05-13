@@ -27,7 +27,7 @@ export class Config {
 
   public getBootstrapConfig(): BootstrapConfig {
     const config = {
-      version: this.config.get<string>('bsVersion') || '5.3.3',
+      version: this.config.get<string>('bsVersion') || '5.3.6',
       isActive: this.config.get<boolean>('enable') ?? true,
       showSuggestions: this.config.get<boolean>('showSuggestions') ?? true,
       autoComplete: this.config.get<boolean>('autoComplete') ?? true,
