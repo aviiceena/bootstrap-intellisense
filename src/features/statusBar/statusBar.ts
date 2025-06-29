@@ -37,13 +37,13 @@ export class StatusBar {
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
-      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.6';
+      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.7';
       this.useLocalFile = bootstrapConfig?.useLocalFile ?? false;
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
     } catch (error) {
       this.isActive = true;
-      this.bootstrapVersion = '5.3.6';
+      this.bootstrapVersion = '5.3.7';
       this.useLocalFile = false;
       this.cssFilePath = '';
       this.languageSupport = [];

@@ -1,7 +1,7 @@
 {
   "name": "bootstrap-intellisense",
   "displayName": "Bootstrap IntelliSense",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Enhance Bootstrap development with CSS class autocompletion for efficient coding in Visual Studio Code.",
   "categories": [
     "Linters",
@@ -36,7 +36,7 @@
           "type": "object",
           "default": {
             "enable": true,
-            "bsVersion": "5.3.6",
+            "bsVersion": "5.3.7",
             "showSuggestions": true,
             "autoComplete": true
           },
@@ -48,7 +48,7 @@
             },
             "bsVersion": {
               "type": "string",
-              "default": "5.3.6",
+              "default": "5.3.7",
               "description": "Selected Bootstrap version"
             },
             "showSuggestions": {
@@ -90,9 +90,9 @@
     }
   },
   "scripts": {
+    "publish": "npm run deploy-vscode && npm run deploy-openvsx",
     "deploy-vscode": "vsce publish",
     "deploy-openvsx": "node scripts/publish-openvsx.js",
-    "publish": "npm run deploy-vscode && npm run deploy-openvsx",
     "build": "vsce package",
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
