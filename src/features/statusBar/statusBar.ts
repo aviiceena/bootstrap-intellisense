@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { getLatestBootstrapVersion } from '../../core/bootstrap-versions';
 
 export class StatusBar {
   private item: vscode.StatusBarItem;
@@ -37,13 +38,13 @@ export class StatusBar {
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
-      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.7';
+      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? getLatestBootstrapVersion();
       this.useLocalFile = bootstrapConfig?.useLocalFile ?? false;
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
     } catch (error) {
       this.isActive = true;
-      this.bootstrapVersion = '5.3.7';
+      this.bootstrapVersion = getLatestBootstrapVersion();
       this.useLocalFile = false;
       this.cssFilePath = '';
       this.languageSupport = [];

@@ -34,12 +34,6 @@
       "properties": {
         "bootstrapIntelliSense": {
           "type": "object",
-          "default": {
-            "enable": true,
-            "bsVersion": "5.3.7",
-            "showSuggestions": true,
-            "autoComplete": true
-          },
           "properties": {
             "enable": {
               "type": "boolean",
@@ -93,13 +87,14 @@
     "publish": "npm run deploy-vscode && npm run deploy-openvsx",
     "deploy-vscode": "vsce publish",
     "deploy-openvsx": "node scripts/publish-openvsx.js",
-    "build": "vsce package",
+    "build": "npm run update-version && vsce package",
     "vscode:prepublish": "npm run package",
+    "update-version": "node scripts/update-bootstrap-version.js",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "npm run update-version && npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
