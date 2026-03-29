@@ -1,8 +1,9 @@
 # Change Log
 
 ## v3.0.4 2025-06-29
+
 - Added: Support for Bootstrap 5.3.7
-- added: Sctipt to publish the extension to Open VSX.
+- added: Script to publish the extension to Open VSX.
 
 ## v3.0.3 2025-05-13
 
