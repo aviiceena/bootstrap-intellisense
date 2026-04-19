@@ -1,7 +1,7 @@
 {
   "name": "bootstrap-intellisense",
   "displayName": "Bootstrap IntelliSense",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "description": "Enhance Bootstrap development with CSS class autocompletion for efficient coding in Visual Studio Code.",
   "categories": [
     "Linters",
@@ -36,7 +36,7 @@
           "type": "object",
           "default": {
             "enable": true,
-            "bsVersion": "5.3.7",
+            "bsVersion": "5.3.8",
             "showSuggestions": true,
             "autoComplete": true
           },
@@ -48,7 +48,7 @@
             },
             "bsVersion": {
               "type": "string",
-              "default": "5.3.7",
+              "default": "5.3.8",
               "description": "Selected Bootstrap version"
             },
             "showSuggestions": {

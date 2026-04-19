@@ -1,8 +1,15 @@
 # Change Log
 
+## v3.0.5 2026-03-29
+
+- added support for Bootstrap v5.3.8
+- changed default configuration to use v5.3.8
+- packaged and replaced the .vsix (extension installer) file
+
 ## v3.0.4 2025-06-29
+
 - Added: Support for Bootstrap 5.3.7
-- added: Sctipt to publish the extension to Open VSX.
+- added: Script to publish the extension to Open VSX.
 
 ## v3.0.3 2025-05-13
 
