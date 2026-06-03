@@ -2,7 +2,7 @@
 
 ![Bootstrap IntelliSense extension banner](/assets/images/banner.png)
 
-Bootstrap IntelliSense is a Visual Studio Code extension that enhances the development experience with Bootstrap. It offers CSS class autocompletion, hover previews, sorting classes, and the ability to choose from multiple versions of Bootstrap.
+Bootstrap IntelliSense is a Visual Studio Code extension that enhances the development experience with Bootstrap. It offers CSS class autocompletion, hover previews, color previews, sorting classes, and the ability to choose from multiple versions of Bootstrap.
 
 This extension is inspired by the popular Tailwind CSS IntelliSense extension.
 
@@ -25,17 +25,31 @@ Enter a class name and the extension will suggest matching CSS classes, if not t
 
 ![Autocomplete suggestions for Bootstrap class names in VS Code](/assets/images/autocomplete.png)
 
+### Color Previews
+
+Bootstrap classes that map to a color now show a color swatch directly in the autocomplete list, and hovering such a class displays the swatch together with its hex code.
+
 ### Class Hover Preview
 
 Just hover over a class name to see a preview of the CSS properties.
 
 ![Hover preview showing CSS properties for a Bootstrap class](/assets/images/css-hover-preview.png)
 
+You can also toggle the hover preview on or off independently of autocompletion from the extension menu.
+
+### Broad Syntax Support
+
+Class names are detected across many syntaxes, including `class`, `className`, `:class`, `v-bind:class`, `[ngClass]`, `[class]`, Svelte `class:` directives, and class helper functions such as `cn()`, `clsx()`, `classNames()`, `twMerge()` and `cva()`. Multi-line class attributes are supported as well.
+
 ### Choose your Bootstrap version
 
 Select the Bootstrap version you are using in your project.
 
 ![Bootstrap version selection menu in the extension](/assets/images/bootsrap-version.png)
+
+### Reload / Clear Class Cache
+
+Use the **Reload / Clear Class Cache** command (from the menu or command palette) to clear the cached Bootstrap classes and reload them — handy after switching versions or updating a local CSS file.
 
 ### Add Custom Language Support
 

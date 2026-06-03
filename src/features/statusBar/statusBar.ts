@@ -7,6 +7,7 @@ export class StatusBar {
   private useLocalFile: boolean = false;
   private cssFilePath: string = '';
   private languageSupport: string[] = [];
+  private hoverEnabled: boolean = true;
   private callbacks: ((
     isActive: boolean,
     useLocalFile: boolean,
@@ -15,7 +16,7 @@ export class StatusBar {
     languageSupport: string[],
   ) => void)[] = [];
 
-  constructor() {
+  constructor(private defaultVersion: string = '5.3.8') {
     this.loadSettings();
     this.item = this.createStatusBarItem();
   }
@@ -34,20 +35,39 @@ export class StatusBar {
         useLocalFile: boolean;
         cssFilePath: string;
         languageSupport: string[];
+        enableHover: boolean;
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
-      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? '5.3.8';
+      this.bootstrapVersion = bootstrapConfig?.bsVersion ?? this.defaultVersion;
       this.useLocalFile = bootstrapConfig?.useLocalFile ?? false;
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
+      this.hoverEnabled = bootstrapConfig?.enableHover ?? true;
     } catch (error) {
       this.isActive = true;
-      this.bootstrapVersion = '5.3.8';
+      this.bootstrapVersion = this.defaultVersion;
       this.useLocalFile = false;
       this.cssFilePath = '';
       this.languageSupport = [];
+      this.hoverEnabled = true;
     }
+  }
+
+  private getConfigurationTarget(config: vscode.WorkspaceConfiguration): vscode.ConfigurationTarget {
+    // Respect the scope where the setting is already defined instead of always
+    // overwriting the global value (which would clobber workspace settings).
+    const inspected = config.inspect('bootstrapIntelliSense');
+
+    if (inspected?.workspaceFolderValue !== undefined) {
+      return vscode.ConfigurationTarget.WorkspaceFolder;
+    }
+
+    if (inspected?.workspaceValue !== undefined) {
+      return vscode.ConfigurationTarget.Workspace;
+    }
+
+    return vscode.ConfigurationTarget.Global;
   }
 
   private async saveSettings() {
@@ -59,8 +79,9 @@ export class StatusBar {
         useLocalFile: this.useLocalFile,
         cssFilePath: this.cssFilePath,
         languageSupport: this.languageSupport,
+        enableHover: this.hoverEnabled,
       };
-      await config.update('bootstrapIntelliSense', settings, vscode.ConfigurationTarget.Global);
+      await config.update('bootstrapIntelliSense', settings, this.getConfigurationTarget(config));
     } catch (error) {
       vscode.window.showErrorMessage('Error saving Bootstrap IntelliSense settings');
     }
@@ -112,6 +133,28 @@ export class StatusBar {
 
   public getLanguageSupport(): string[] {
     return this.languageSupport;
+  }
+
+  public getHoverEnabled(): boolean {
+    return this.hoverEnabled;
+  }
+
+  public async toggleHover() {
+    const oldStatus = this.hoverEnabled;
+    this.hoverEnabled = !this.hoverEnabled;
+
+    try {
+      await this.saveSettings();
+      this.callbacks.forEach((callback) =>
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
+      );
+
+      const statusChange = this.hoverEnabled ? 'enabled' : 'disabled';
+      vscode.window.showInformationMessage(`Bootstrap IntelliSense hover has been ${statusChange}`);
+    } catch (error) {
+      this.hoverEnabled = oldStatus;
+      vscode.window.showErrorMessage('Error toggling Bootstrap IntelliSense hover');
+    }
   }
 
   public async setLanguageSupport(languages: string[]) {

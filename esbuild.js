@@ -34,7 +34,13 @@ async function main() {
     platform: 'node',
     outfile: 'dist/extension.js',
     external: ['vscode'],
-    logLevel: 'silent',
+    // Use css-tree's pre-bundled standalone build, which inlines its data and
+    // avoids `createRequire(import.meta.url)`. The default entry would break
+    // when bundled to CJS (import.meta.url becomes undefined at runtime).
+    alias: {
+      'css-tree': 'css-tree/dist/csstree.esm',
+    },
+    logLevel: 'warning',
     plugins: [
       /* add to the end of plugins array */
       esbuildProblemMatcherPlugin,

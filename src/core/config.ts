@@ -5,6 +5,7 @@ export interface BootstrapConfig {
   isActive: boolean;
   showSuggestions: boolean;
   autoComplete: boolean;
+  hoverEnabled: boolean;
   useLocalFile?: boolean;
   cssFilePath?: string;
   languageSupport?: string[];
@@ -12,10 +13,16 @@ export interface BootstrapConfig {
 
 export class Config {
   private static instance: Config;
-  private config: vscode.WorkspaceConfiguration;
+  // Default version to use when the user has not selected one. Set at activation
+  // to the newest available Bootstrap version.
+  private defaultVersion: string = '5.3.8';
 
-  private constructor() {
-    this.config = vscode.workspace.getConfiguration('bootstrapIntelliSense');
+  private constructor() {}
+
+  // Always read a fresh configuration snapshot so runtime toggles (e.g. enabling
+  // or disabling hover) are observed immediately instead of a stale cached value.
+  private get config(): vscode.WorkspaceConfiguration {
+    return vscode.workspace.getConfiguration('bootstrapIntelliSense');
   }
 
   public static getInstance(): Config {
@@ -25,12 +32,17 @@ export class Config {
     return Config.instance;
   }
 
+  public setDefaultVersion(version: string): void {
+    this.defaultVersion = version;
+  }
+
   public getBootstrapConfig(): BootstrapConfig {
     const config = {
-      version: this.config.get<string>('bsVersion') || '5.3.8',
+      version: this.config.get<string>('bsVersion') || this.defaultVersion,
       isActive: this.config.get<boolean>('enable') ?? true,
       showSuggestions: this.config.get<boolean>('showSuggestions') ?? true,
       autoComplete: this.config.get<boolean>('autoComplete') ?? true,
+      hoverEnabled: this.config.get<boolean>('enableHover') ?? true,
       useLocalFile: this.config.get<boolean>('useLocalFile', false),
       cssFilePath: this.config.get<string>('cssFilePath', ''),
       languageSupport: this.config.get<string[]>('languageSupport', []),
@@ -50,6 +62,7 @@ export class Config {
       isActive: 'enable',
       showSuggestions: 'showSuggestions',
       autoComplete: 'autoComplete',
+      hoverEnabled: 'enableHover',
       useLocalFile: 'useLocalFile',
       cssFilePath: 'cssFilePath',
       languageSupport: 'languageSupport',

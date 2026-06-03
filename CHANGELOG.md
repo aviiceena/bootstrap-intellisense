@@ -1,5 +1,28 @@
 # Change Log
 
+## v3.1.0 2026-06-04
+
+### Added
+
+- Color swatches in autocomplete suggestions: Bootstrap classes that map to a color now show a color preview directly in the completion list.
+- Color preview on hover: hovering a color-related class now shows a color swatch and its hex code above the CSS rule.
+- New command **"Reload / Clear Class Cache"** (available in the menu and via the command palette) to clear the cached Bootstrap classes and reload them.
+- New menu toggle to enable/disable the hover feature independently of autocompletion (new `enableHover` setting, enabled by default).
+- Broader class-attribute syntax support: class names are now detected in `class`, `className`, `:class`, `v-bind:class`, `[ngClass]`, `[class]`, Svelte `class:` directives, and inside class helper calls such as `cn()`, `clsx()`, `classNames()`, `twMerge()` and `cva()`.
+- Multi-line class attributes are now supported for both completion and hover.
+
+### Changed
+
+- The default Bootstrap version now falls back dynamically to the newest available version instead of a hard-coded value.
+- Settings are now saved to the scope where they are already defined (workspace folder / workspace / global) instead of always overwriting the global value.
+- CSS class extraction was rewritten to use a proper CSS parser (`css-tree`) instead of regex, making class detection far more robust.
+
+### Fixed
+
+- Fixed junk suggestions (e.g. `1875rem`, `25`) appearing in autocomplete when no input was typed; decimal values in CSS declarations are no longer mistaken for class names.
+- Configuration is now read fresh on every access, so runtime toggles (such as enabling/disabling hover) take effect immediately.
+- Simplified and hardened the hover provider for more reliable class detection.
+
 ## v3.0.5 2026-03-29
 
 - added support for Bootstrap v5.3.8

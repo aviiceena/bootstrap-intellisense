@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { Config } from '../../core/config';
+import { getClassValueAtCursor } from '../../core/classContext';
+
+// How many characters before the cursor to inspect when detecting a class
+// context. Large enough to cover multi-line class attributes, small enough to
+// stay cheap on every keystroke.
+const LOOKBEHIND_CHARS = 1000;
 
 // Default languages supported if no user settings are present
 export const defaultLanguageSupport: string[] = [
@@ -29,9 +35,24 @@ export function updateLanguageSupport(languages?: string[]) {
   }
 }
 
+interface ClassEntry {
+  className: string;
+  classProperties: string;
+  color?: string;
+}
+
+// Pure helper so the filtering can be unit tested without the VS Code API.
+// Excludes already-used classes and pre-filters by the token currently being typed.
+export function filterClasses<T extends ClassEntry>(classes: T[], usedClasses: string[], currentPrefix: string): T[] {
+  const prefix = currentPrefix.toLowerCase();
+  return classes
+    .filter(({ className }) => !usedClasses.includes(className))
+    .filter(({ className }) => prefix === '' || className.toLowerCase().includes(prefix));
+}
+
 export class CompletionProvider {
   private provider: vscode.Disposable | undefined;
-  private cachedClasses: { className: string; classProperties: string }[] | undefined;
+  private cachedClasses: ClassEntry[] | undefined;
   private useLocalFile: boolean = false;
   private cssFilePath: string = '';
 
@@ -59,6 +80,7 @@ export class CompletionProvider {
         },
         '"',
         "'",
+        '`',
         '=',
         ' ',
       );
@@ -76,6 +98,14 @@ export class CompletionProvider {
     this.cachedClasses = undefined;
   }
 
+  // Text from up to LOOKBEHIND_CHARS before the cursor, used for class-context
+  // detection (supports multi-line class attributes).
+  private getTextBeforeCursor(document: vscode.TextDocument, position: vscode.Position): string {
+    const offset = document.offsetAt(position);
+    const start = document.positionAt(Math.max(0, offset - LOOKBEHIND_CHARS));
+    return document.getText(new vscode.Range(start, position));
+  }
+
   private shouldProvideCompletion(document: vscode.TextDocument, position: vscode.Position): boolean {
     if (!this.isActive) {
       return false;
@@ -90,10 +120,8 @@ export class CompletionProvider {
       return false;
     }
 
-    const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
-    const textBefore = document.getText(beforeRange);
-    const shouldProvide = /class(?:Name)?=["']?[^"']*$/.test(textBefore);
-    return shouldProvide;
+    const textBefore = this.getTextBeforeCursor(document, position);
+    return getClassValueAtCursor(textBefore) !== undefined;
   }
 
   private getClassCategory(className: string): string {
@@ -136,42 +164,27 @@ export class CompletionProvider {
       return [];
     }
 
-    const beforeRange = new vscode.Range(new vscode.Position(position.line, 0), position);
-    const textBefore = document.getText(beforeRange);
-    const match = textBefore.match(/class(?:Name)?=["']([^"']*)$/);
-    const usedClasses = match ? match[1].split(' ').filter((c) => c.trim()) : [];
+    const textBefore = this.getTextBeforeCursor(document, position);
+    const classValue = getClassValueAtCursor(textBefore) ?? '';
+    const enteredClasses = classValue.split(/\s+/);
 
-    return this.cachedClasses
-      .filter(({ className }) => !usedClasses.includes(className))
-      .map(({ className, classProperties }) => {
-        const item = new vscode.CompletionItem(className, vscode.CompletionItemKind.Value);
-        item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
-        item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
-        item.insertText = this.autoComplete ? className : '';
-        const parts = this.getClassParts(className);
-        item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
-        return item;
-      });
-  }
+    // Classes already fully typed in the current attribute (everything but the last token).
+    const usedClasses = enteredClasses.slice(0, -1).filter((c) => c.trim());
 
-  public updateVersion(version: string) {
-    this.bootstrapVersion = version;
-    this.useLocalFile = false;
-    this.cssFilePath = '';
-    this.cachedClasses = undefined;
-  }
+    // The token currently being typed; used to pre-filter the (potentially large) class list.
+    const currentPrefix = enteredClasses[enteredClasses.length - 1] ?? '';
 
-  public updateLocalFile(cssFilePath: string) {
-    this.useLocalFile = true;
-    this.cssFilePath = cssFilePath;
-    this.cachedClasses = undefined;
-  }
-
-  public updateConfig(isActive: boolean, showSuggestions: boolean, autoComplete: boolean) {
-    this.isActive = isActive;
-    this.showSuggestions = showSuggestions;
-    this.autoComplete = autoComplete;
-    // Reset cache to ensure fresh class suggestions
-    this.cachedClasses = undefined;
+    return filterClasses(this.cachedClasses, usedClasses, currentPrefix).map(({ className, classProperties, color }) => {
+      // For color classes, use the Color kind so VS Code renders a swatch. The
+      // swatch value is read from the `detail` field (must be a valid color).
+      const kind = color ? vscode.CompletionItemKind.Color : vscode.CompletionItemKind.Value;
+      const item = new vscode.CompletionItem(className, kind);
+      item.detail = color ?? `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
+      item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
+      item.insertText = this.autoComplete ? className : '';
+      const parts = this.getClassParts(className);
+      item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
+      return item;
+    });
   }
 }

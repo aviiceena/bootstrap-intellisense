@@ -1,48 +1,16 @@
 import * as vscode from 'vscode';
 import { StatusBar } from '../statusBar/statusBar';
 import { findBootstrapCssFiles, readLocalCssFile, extractBootstrapVersion } from '../../core/bootstrap';
+import { loadBootstrapVersions, BootstrapVersions } from '../../core/versions';
 import * as path from 'path';
-import * as fs from 'fs';
-
-// Typdefinition für die Struktur der JSON-Datei
-interface BootstrapVersions {
-  [major: string]: string[]; // z.B. "v5": ["5.3.3", ...]
-}
 
 export class Menu {
   private bootstrapVersions: BootstrapVersions | null = null;
 
-  constructor(private statusBar: StatusBar) {
-    this.loadVersions(); // Versionen beim Initialisieren laden
-  }
-
-  private loadVersions() {
-    try {
-      // __dirname ist im Kontext von VS Code Erweiterungen nicht immer zuverlässig für den Zugriff auf gepackte Assets.
-      // vscode.extensions.getExtension('YOUR_EXTENSION_ID').extensionPath ist der empfohlene Weg.
-      // Bitte ersetze 'Hossaini.bootstrap-intellisense' mit deiner tatsächlichen Extension ID aus package.json
-      const extension = vscode.extensions.getExtension('Hossaini.bootstrap-intellisense');
-      if (extension) {
-        const versionsPath = path.join(extension.extensionPath, 'assets', 'bootstrap-versions.json');
-        if (fs.existsSync(versionsPath)) {
-          const fileContent = fs.readFileSync(versionsPath, 'utf-8');
-          this.bootstrapVersions = JSON.parse(fileContent) as BootstrapVersions;
-        } else {
-          vscode.window.showErrorMessage(
-            'bootstrap-versions.json not found in assets folder. Please ensure it exists.',
-          );
-          this.bootstrapVersions = null; // Fallback
-          console.error(`bootstrap-versions.json not found at ${versionsPath}`);
-        }
-      } else {
-        vscode.window.showErrorMessage('Could not determine extension path. Bootstrap versions cannot be loaded.');
-        console.warn('Could not determine extension path to load bootstrap-versions.json');
-        this.bootstrapVersions = null;
-      }
-    } catch (error: any) {
-      vscode.window.showErrorMessage(`Error loading or parsing bootstrap-versions.json: ${error.message}`);
-      console.error('Error loading bootstrap versions:', error);
-      this.bootstrapVersions = null; // Fallback
+  constructor(private statusBar: StatusBar, private extensionPath: string) {
+    this.bootstrapVersions = loadBootstrapVersions(this.extensionPath);
+    if (!this.bootstrapVersions) {
+      vscode.window.showErrorMessage('Could not load bootstrap-versions.json. Version selection may be unavailable.');
     }
   }
 
@@ -63,8 +31,16 @@ export class Menu {
         label: '$(diff-added) Add language support',
       },
       {
+        label: '$(refresh) Reload / clear class cache',
+      },
+      {
         label: '',
         kind: vscode.QuickPickItemKind.Separator,
+      },
+      {
+        label: `${
+          this.statusBar.getHoverEnabled() ? '$(eye-closed) Disable hover' : '$(eye) Enable hover'
+        }`,
       },
       {
         label: `${
@@ -89,6 +65,9 @@ export class Menu {
         }`:
           await this.statusBar.toggleActive();
           break;
+        case `${this.statusBar.getHoverEnabled() ? '$(eye-closed) Disable hover' : '$(eye) Enable hover'}`:
+          await this.statusBar.toggleHover();
+          break;
         case '$(versions) Select Bootstrap version':
         case `$(versions) Select Bootstrap version (v${this.statusBar.getBootstrapVersion()})`:
           // If using local file, disable it first
@@ -104,6 +83,9 @@ export class Menu {
           break;
         case '$(diff-added) Add language support':
           await this.showLanguageSupportMenu();
+          break;
+        case '$(refresh) Reload / clear class cache':
+          await vscode.commands.executeCommand('bootstrap-intelliSense.reloadCache');
           break;
       }
     }
