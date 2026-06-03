@@ -5,6 +5,8 @@ import { CompletionProvider, languageSupport, updateLanguageSupport } from './fe
 import { HoverProvider } from './features/hover/hoverProvider';
 import { Container } from './core/container';
 import { Config } from './core/config';
+import { deleteAllBootstrapCaches } from './core/bootstrap';
+import { getLatestBootstrapVersion } from './core/versions';
 
 let completionProvider: CompletionProvider | undefined;
 let hoverProvider: HoverProvider | undefined;
@@ -38,13 +40,17 @@ function recreateProviders(
     container.register('completionProvider', completionProvider);
     completionProvider.register(context);
 
-    // Update HoverProvider
+    // Update HoverProvider. Hover can be toggled independently of completion, so
+    // only register it when enabled.
     if (hoverProvider) {
       hoverProvider.dispose();
+      hoverProvider = undefined;
     }
-    hoverProvider = new HoverProvider(isActive, version);
-    container.register('hoverProvider', hoverProvider);
-    hoverProvider.register(context);
+    if (config.get<boolean>('enableHover') ?? true) {
+      hoverProvider = new HoverProvider(isActive, version, useLocalFile, cssFilePath);
+      container.register('hoverProvider', hoverProvider);
+      hoverProvider.register(context);
+    }
   } else {
     // If extension is not active, dispose of hover provider
     if (hoverProvider) {
@@ -59,14 +65,19 @@ export async function activate(context: vscode.ExtensionContext) {
   container.register('context', context);
   container.register('config', config);
 
+  // Use the newest available Bootstrap version as the default when the user has
+  // not explicitly selected one.
+  const latestVersion = getLatestBootstrapVersion(context.extensionPath);
+  config.setDefaultVersion(latestVersion);
+
   const bootstrapConfig = config.getBootstrapConfig();
 
   // Initialize language support from settings
   updateLanguageSupport(bootstrapConfig.languageSupport);
 
   // Initialize features
-  const statusBar = new StatusBar();
-  const menu = new Menu(statusBar);
+  const statusBar = new StatusBar(latestVersion);
+  const menu = new Menu(statusBar, context.extensionPath);
 
   container.register('statusBar', statusBar);
   container.register('menu', menu);
@@ -96,6 +107,21 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('bootstrap-intelliSense.showMainMenu', async () => {
       const menu = container.get<Menu>('menu');
       await menu.showMainMenu();
+    }),
+    vscode.commands.registerCommand('bootstrap-intelliSense.reloadCache', async () => {
+      deleteAllBootstrapCaches();
+
+      const currentConfig = config.getBootstrapConfig();
+      updateLanguageSupport(currentConfig.languageSupport);
+      recreateProviders(
+        context,
+        currentConfig.isActive ?? true,
+        currentConfig.version,
+        currentConfig.useLocalFile ?? false,
+        currentConfig.cssFilePath ?? '',
+      );
+
+      vscode.window.showInformationMessage('Bootstrap IntelliSense: class cache cleared and reloaded');
     }),
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration('bootstrapIntelliSense')) {

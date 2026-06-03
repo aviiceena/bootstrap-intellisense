@@ -1,12 +1,18 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { languageSupport } from '../completion/completionProvider';
+import { isInsideClassContext } from '../../core/classContext';
 
 export class HoverProvider {
   private provider: vscode.Disposable | undefined;
-  private cachedClasses: { className: string; classProperties: string }[] | undefined;
+  private cachedClasses: { className: string; classProperties: string; color?: string }[] | undefined;
 
-  constructor(private isActive: boolean, private bootstrapVersion: string) {}
+  constructor(
+    private isActive: boolean,
+    private bootstrapVersion: string,
+    private useLocalFile: boolean = false,
+    private cssFilePath: string = '',
+  ) {}
 
   public register(context: vscode.ExtensionContext): vscode.Disposable | undefined {
     this.dispose();
@@ -32,64 +38,23 @@ export class HoverProvider {
       return undefined;
     }
 
-    const line = document.lineAt(position.line);
-    const lineText = line.text;
-
-    let classUnderCursor: string | undefined;
-    let classRange: vscode.Range | undefined;
-
-    // Regex to find class attributes and their values. Handles class="...", class='...', className="..." etc.
-    const classAttributeRegex = /class(?:Name)?\s*=\s*(["'])(.*?)\1/g;
-    let match;
-
-    while ((match = classAttributeRegex.exec(lineText)) !== null) {
-      const valueContent = match[2]; // The content of the class string, e.g., "foo bar-baz qux"
-      // Calculate the start index of the value within the lineText
-      const valueStartIndexInDocument = match.index + match[0].indexOf(valueContent);
-      const valueEndIndexInDocument = valueStartIndexInDocument + valueContent.length;
-
-      // Check if the cursor is within this class attribute's *value*
-      if (position.character >= valueStartIndexInDocument && position.character <= valueEndIndexInDocument) {
-        const cursorPosInAttributeValue = position.character - valueStartIndexInDocument;
-
-        // Find the specific class name under the cursor within the attributeValue
-        let currentWordStart = -1;
-        // Iterate up to and including attributeValue.length to handle class at the end of the string
-        for (let i = 0; i <= valueContent.length; i++) {
-          // Treat end of string or space as a separator.
-          // A class character is alphanumeric or a hyphen.
-          const char = i < valueContent.length ? valueContent[i] : ' ';
-          const isWordChar = i < valueContent.length && /[a-zA-Z0-9-]/.test(char);
-
-          if (isWordChar && currentWordStart === -1) {
-            currentWordStart = i; // Start of a new potential class
-          } else if (!isWordChar && currentWordStart !== -1) {
-            // We've reached the end of a potential class word (e.g. by space or end of string)
-            // The word is valueContent.substring(currentWordStart, i)
-            // Check if cursor is within this word's span [currentWordStart, i-1]
-            if (cursorPosInAttributeValue >= currentWordStart && cursorPosInAttributeValue < i) {
-              classUnderCursor = valueContent.substring(currentWordStart, i);
-              const rangeStartInDocument = valueStartIndexInDocument + currentWordStart;
-              const rangeEndInDocument = valueStartIndexInDocument + i;
-              classRange = new vscode.Range(position.line, rangeStartInDocument, position.line, rangeEndInDocument);
-              break; // Found the class under cursor
-            }
-            currentWordStart = -1; // Reset for next word
-          }
-        }
-        if (classUnderCursor) {
-          break; // Found class in this attribute, no need to check other attributes on the line
-        }
-      }
+    // Let VS Code resolve the token under the cursor. The custom pattern keeps
+    // hyphenated class names (e.g. "btn-primary") together.
+    const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z0-9_-]+/);
+    if (!wordRange) {
+      return undefined;
     }
 
-    if (!classUnderCursor || !classRange) {
-      return undefined; // No valid class found under the cursor in any class attribute
+    // Only provide hovers inside a class context (attribute value or helper call).
+    const lineText = document.lineAt(position.line).text;
+    if (!isInsideClassContext(lineText, position.character)) {
+      return undefined;
     }
 
-    // Original logic for fetching and displaying hover content
+    const classUnderCursor = document.getText(wordRange);
+
     if (!this.cachedClasses) {
-      this.cachedClasses = await getClasses(this.bootstrapVersion);
+      this.cachedClasses = await getClasses(this.bootstrapVersion, this.useLocalFile, this.cssFilePath);
     }
 
     const classInfo = this.cachedClasses.find((c) => c.className === classUnderCursor);
@@ -98,8 +63,25 @@ export class HoverProvider {
     }
 
     const content = new vscode.MarkdownString();
+
+    // For color classes, show a swatch preview and the resolved hex code above
+    // the CSS rule.
+    if (classInfo.color) {
+      content.appendMarkdown(`${this.createSwatch(classInfo.color)} ${classInfo.color}\n\n`);
+    }
+
     content.appendCodeblock(classInfo.classProperties, 'css');
-    return new vscode.Hover(content, classRange);
+    return new vscode.Hover(content, wordRange);
+  }
+
+  // Renders a small color preview as an inline SVG data-URI image, which VS Code
+  // displays in hover markdown.
+  private createSwatch(color: string): string {
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12">` +
+      `<rect width="12" height="12" rx="2" fill="${color}" stroke="rgba(128,128,128,0.6)"/></svg>`;
+    const dataUri = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+    return `![color](${dataUri})`;
   }
 
   public dispose() {
@@ -108,14 +90,5 @@ export class HoverProvider {
       this.provider = undefined;
     }
     this.cachedClasses = undefined;
-  }
-
-  public updateVersion(version: string) {
-    this.bootstrapVersion = version;
-    this.cachedClasses = undefined;
-  }
-
-  public updateConfig(isActive: boolean) {
-    this.isActive = isActive;
   }
 }
