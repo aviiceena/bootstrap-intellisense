@@ -1,5 +1,9 @@
 # Change Log
 
+## v3.1.1 2026-06-04
+
+- Updated the extension icon
+
 ## v3.1.0 2026-06-04
 
 ### Added
