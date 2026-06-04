@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { languageSupport } from '../completion/completionProvider';
-import { isInsideClassContext } from '../../core/classContext';
+import { isInsideClassContextAtOffset } from '../../core/classContext';
 
 export class HoverProvider {
   private provider: vscode.Disposable | undefined;
@@ -46,8 +46,8 @@ export class HoverProvider {
     }
 
     // Only provide hovers inside a class context (attribute value or helper call).
-    const lineText = document.lineAt(position.line).text;
-    if (!isInsideClassContext(lineText, position.character)) {
+    const documentText = document.getText();
+    if (!isInsideClassContextAtOffset(documentText, document.offsetAt(position))) {
       return undefined;
     }
 

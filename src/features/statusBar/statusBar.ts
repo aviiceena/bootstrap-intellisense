@@ -8,6 +8,8 @@ export class StatusBar {
   private cssFilePath: string = '';
   private languageSupport: string[] = [];
   private hoverEnabled: boolean = true;
+  private colorPreviewEnabled: boolean = true;
+  private sortOnSave: boolean = false;
   private callbacks: ((
     isActive: boolean,
     useLocalFile: boolean,
@@ -36,6 +38,8 @@ export class StatusBar {
         cssFilePath: string;
         languageSupport: string[];
         enableHover: boolean;
+        enableColorPreview: boolean;
+        sortOnSave: boolean;
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
@@ -44,6 +48,8 @@ export class StatusBar {
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
       this.hoverEnabled = bootstrapConfig?.enableHover ?? true;
+      this.colorPreviewEnabled = bootstrapConfig?.enableColorPreview ?? true;
+      this.sortOnSave = bootstrapConfig?.sortOnSave ?? false;
     } catch (error) {
       this.isActive = true;
       this.bootstrapVersion = this.defaultVersion;
@@ -51,6 +57,8 @@ export class StatusBar {
       this.cssFilePath = '';
       this.languageSupport = [];
       this.hoverEnabled = true;
+      this.colorPreviewEnabled = true;
+      this.sortOnSave = false;
     }
   }
 
@@ -80,6 +88,8 @@ export class StatusBar {
         cssFilePath: this.cssFilePath,
         languageSupport: this.languageSupport,
         enableHover: this.hoverEnabled,
+        enableColorPreview: this.colorPreviewEnabled,
+        sortOnSave: this.sortOnSave,
       };
       await config.update('bootstrapIntelliSense', settings, this.getConfigurationTarget(config));
     } catch (error) {
@@ -137,6 +147,50 @@ export class StatusBar {
 
   public getHoverEnabled(): boolean {
     return this.hoverEnabled;
+  }
+
+  public getColorPreviewEnabled(): boolean {
+    return this.colorPreviewEnabled;
+  }
+
+  public getSortOnSave(): boolean {
+    return this.sortOnSave;
+  }
+
+  public async toggleSortOnSave() {
+    const oldStatus = this.sortOnSave;
+    this.sortOnSave = !this.sortOnSave;
+
+    try {
+      await this.saveSettings();
+      this.callbacks.forEach((callback) =>
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
+      );
+
+      const statusChange = this.sortOnSave ? 'enabled' : 'disabled';
+      vscode.window.showInformationMessage(`Bootstrap IntelliSense class sorting on save has been ${statusChange}`);
+    } catch (error) {
+      this.sortOnSave = oldStatus;
+      vscode.window.showErrorMessage('Error toggling Bootstrap IntelliSense class sorting');
+    }
+  }
+
+  public async toggleColorPreview() {
+    const oldStatus = this.colorPreviewEnabled;
+    this.colorPreviewEnabled = !this.colorPreviewEnabled;
+
+    try {
+      await this.saveSettings();
+      this.callbacks.forEach((callback) =>
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
+      );
+
+      const statusChange = this.colorPreviewEnabled ? 'enabled' : 'disabled';
+      vscode.window.showInformationMessage(`Bootstrap IntelliSense color preview has been ${statusChange}`);
+    } catch (error) {
+      this.colorPreviewEnabled = oldStatus;
+      vscode.window.showErrorMessage('Error toggling Bootstrap IntelliSense color preview');
+    }
   }
 
   public async toggleHover() {

@@ -27,7 +27,20 @@ Enter a class name and the extension will suggest matching CSS classes, if not t
 
 ### Color Previews
 
-Bootstrap classes that map to a color now show a color swatch directly in the autocomplete list, and hovering such a class displays the swatch together with its hex code.
+Bootstrap color utility classes show swatches in three places:
+
+- **In the editor** — a small color box appears to the left of each color class as you type (toggle via the menu or `enableColorPreview`).
+- **In autocomplete** — color classes show a swatch in the suggestion list, with the hex code in the details panel.
+- **On hover** — hovering a color class shows the swatch and hex code above the CSS rule.
+
+Semi-transparent classes such as `text-black-50` display the correct alpha (e.g. `#00000080`).
+
+### Class Sorting
+
+Sort Bootstrap classes in a consistent order: Layout → Spacing → Components → Utilities.
+
+- Enable **Sort on Save** from the extension menu (or set `sortOnSave` in settings).
+- Run **Bootstrap IntelliSense: Sort Classes in Current File** from the command palette to sort the current file on demand.
 
 ### Class Hover Preview
 
@@ -35,7 +48,7 @@ Just hover over a class name to see a preview of the CSS properties.
 
 ![Hover preview showing CSS properties for a Bootstrap class](/assets/images/css-hover-preview.png)
 
-You can also toggle the hover preview on or off independently of autocompletion from the extension menu.
+You can toggle hover and inline color previews independently from the extension menu.
 
 ### Broad Syntax Support
 

@@ -3,18 +3,36 @@ import { StatusBar } from './features/statusBar/statusBar';
 import { Menu } from './features/menu/menu';
 import { CompletionProvider, languageSupport, updateLanguageSupport } from './features/completion/completionProvider';
 import { HoverProvider } from './features/hover/hoverProvider';
+import { ColorDecorator } from './features/colorDecoration/colorDecorator';
 import { Container } from './core/container';
 import { Config } from './core/config';
 import { deleteAllBootstrapCaches } from './core/bootstrap';
 import { getLatestBootstrapVersion } from './core/versions';
+import { getSortEditsForDocument } from './features/classSorting/classSorter';
 
 let completionProvider: CompletionProvider | undefined;
 let hoverProvider: HoverProvider | undefined;
+let colorDecorator: ColorDecorator | undefined;
 const container = Container.getInstance();
 const config = Config.getInstance();
 
+// Settings that require tearing down and re-registering language providers.
+const PROVIDER_CONFIG_KEYS = [
+  'bootstrapIntelliSense.enable',
+  'bootstrapIntelliSense.bsVersion',
+  'bootstrapIntelliSense.enableHover',
+  'bootstrapIntelliSense.enableColorPreview',
+  'bootstrapIntelliSense.useLocalFile',
+  'bootstrapIntelliSense.cssFilePath',
+  'bootstrapIntelliSense.languageSupport',
+] as const;
+
+function configurationAffectsProviders(e: vscode.ConfigurationChangeEvent): boolean {
+  return PROVIDER_CONFIG_KEYS.some((key) => e.affectsConfiguration(key));
+}
+
 // Function to completely recreate all providers
-function recreateProviders(
+async function recreateProviders(
   context: vscode.ExtensionContext,
   isActive: boolean,
   version: string,
@@ -28,14 +46,7 @@ function recreateProviders(
   }
 
   if (isActive) {
-    completionProvider = new CompletionProvider(
-      isActive,
-      version,
-      config.get<boolean>('showSuggestions') ?? true,
-      config.get<boolean>('autoComplete') ?? true,
-      useLocalFile,
-      cssFilePath,
-    );
+    completionProvider = new CompletionProvider(isActive, version, useLocalFile, cssFilePath);
 
     container.register('completionProvider', completionProvider);
     completionProvider.register(context);
@@ -51,11 +62,27 @@ function recreateProviders(
       container.register('hoverProvider', hoverProvider);
       hoverProvider.register(context);
     }
+
+    // Update ColorDecorator. Like hover, it can be toggled independently, so
+    // only recreate it when enabled.
+    if (colorDecorator) {
+      colorDecorator.dispose();
+      colorDecorator = undefined;
+    }
+    if (config.get<boolean>('enableColorPreview') ?? true) {
+      colorDecorator = new ColorDecorator(isActive, version, useLocalFile, cssFilePath);
+      container.register('colorDecorator', colorDecorator);
+      await colorDecorator.register(context);
+    }
   } else {
-    // If extension is not active, dispose of hover provider
+    // If extension is not active, dispose of hover provider and color decorator
     if (hoverProvider) {
       hoverProvider.dispose();
       hoverProvider = undefined;
+    }
+    if (colorDecorator) {
+      colorDecorator.dispose();
+      colorDecorator = undefined;
     }
   }
 }
@@ -84,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (bootstrapConfig.isActive) {
     // Initialize providers with current configuration
-    recreateProviders(
+    await recreateProviders(
       context,
       bootstrapConfig.isActive ?? true,
       bootstrapConfig.version,
@@ -93,14 +120,8 @@ export async function activate(context: vscode.ExtensionContext) {
     );
   }
 
-  // Subscribe to status changes
-  statusBar.subscribe((isActive, useLocalFile, cssFilePath, version, languageSupportList) => {
-    // Update language support
-    updateLanguageSupport(languageSupportList);
-
-    // Recreate all providers
-    recreateProviders(context, isActive, version, useLocalFile, cssFilePath);
-  });
+  // Provider lifecycle is driven by onDidChangeConfiguration so menu toggles
+  // (which persist via statusBar.saveSettings) do not trigger a duplicate recreate.
 
   // Register commands and configuration change handler
   context.subscriptions.push(
@@ -108,12 +129,58 @@ export async function activate(context: vscode.ExtensionContext) {
       const menu = container.get<Menu>('menu');
       await menu.showMainMenu();
     }),
+    vscode.commands.registerCommand('bootstrap-intelliSense.toggleSortOnSave', async () => {
+      const statusBar = container.get<StatusBar>('statusBar');
+      await statusBar.toggleSortOnSave();
+    }),
+    vscode.commands.registerCommand('bootstrap-intelliSense.sortClasses', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        return;
+      }
+
+      const currentConfig = config.getBootstrapConfig();
+      if (!currentConfig.isActive) {
+        vscode.window.showWarningMessage('Bootstrap IntelliSense is disabled');
+        return;
+      }
+      if (!languageSupport.includes(editor.document.languageId)) {
+        vscode.window.showWarningMessage(
+          `Bootstrap IntelliSense does not support language "${editor.document.languageId}"`,
+        );
+        return;
+      }
+
+      const edits = getSortEditsForDocument(editor.document);
+      if (edits.length === 0) {
+        vscode.window.showInformationMessage('Bootstrap IntelliSense: classes are already sorted');
+        return;
+      }
+
+      await editor.edit((editBuilder) => {
+        for (const edit of edits) {
+          editBuilder.replace(edit.range, edit.newText);
+        }
+      });
+    }),
+    // Sort Bootstrap classes when a supported document is saved, if enabled.
+    vscode.workspace.onWillSaveTextDocument((event) => {
+      const currentConfig = config.getBootstrapConfig();
+      if (!currentConfig.isActive || !currentConfig.sortOnSave) {
+        return;
+      }
+      if (!languageSupport.includes(event.document.languageId)) {
+        return;
+      }
+
+      event.waitUntil(Promise.resolve(getSortEditsForDocument(event.document)));
+    }),
     vscode.commands.registerCommand('bootstrap-intelliSense.reloadCache', async () => {
-      deleteAllBootstrapCaches();
+      const cacheDeleted = deleteAllBootstrapCaches();
 
       const currentConfig = config.getBootstrapConfig();
       updateLanguageSupport(currentConfig.languageSupport);
-      recreateProviders(
+      await recreateProviders(
         context,
         currentConfig.isActive ?? true,
         currentConfig.version,
@@ -121,24 +188,39 @@ export async function activate(context: vscode.ExtensionContext) {
         currentConfig.cssFilePath ?? '',
       );
 
-      vscode.window.showInformationMessage('Bootstrap IntelliSense: class cache cleared and reloaded');
-    }),
-    vscode.workspace.onDidChangeConfiguration(async (e) => {
-      if (e.affectsConfiguration('bootstrapIntelliSense')) {
-        const newConfig = config.getBootstrapConfig();
-
-        // Update language support from settings
-        updateLanguageSupport(newConfig.languageSupport);
-
-        // Recreate all providers
-        recreateProviders(
-          context,
-          newConfig.isActive ?? true,
-          newConfig.version,
-          newConfig.useLocalFile ?? false,
-          newConfig.cssFilePath ?? '',
+      if (currentConfig.isActive) {
+        vscode.window.showInformationMessage(
+          cacheDeleted
+            ? 'Bootstrap IntelliSense: class cache cleared and reloaded'
+            : 'Bootstrap IntelliSense: providers reloaded (no cache files found)',
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          cacheDeleted
+            ? 'Bootstrap IntelliSense: class cache cleared'
+            : 'Bootstrap IntelliSense: no cache files found to clear',
         );
       }
+    }),
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (!e.affectsConfiguration('bootstrapIntelliSense')) {
+        return;
+      }
+
+      // sortOnSave is read at save time; toggling it must not reload providers.
+      if (!configurationAffectsProviders(e)) {
+        return;
+      }
+
+      const newConfig = config.getBootstrapConfig();
+      updateLanguageSupport(newConfig.languageSupport);
+      await recreateProviders(
+        context,
+        newConfig.isActive ?? true,
+        newConfig.version,
+        newConfig.useLocalFile ?? false,
+        newConfig.cssFilePath ?? '',
+      );
     }),
     statusBar,
   );
@@ -152,6 +234,10 @@ export function deactivate() {
   if (hoverProvider) {
     hoverProvider.dispose();
     hoverProvider = undefined;
+  }
+  if (colorDecorator) {
+    colorDecorator.dispose();
+    colorDecorator = undefined;
   }
   container.clear();
 }
