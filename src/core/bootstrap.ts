@@ -21,7 +21,7 @@ interface CacheFile {
 
 // Bump this whenever the extraction logic or cache structure changes,
 // so previously cached files are considered stale and rebuilt.
-const CACHE_SCHEMA_VERSION = 8;
+const CACHE_SCHEMA_VERSION = 9;
 
 // Maximum age of a cache entry before it is rebuilt (30 days).
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -273,9 +273,46 @@ const findRuleColor = (block: csstree.Block, variables: Map<string, string>): st
   return undefined;
 };
 
+// Whether a declaration only contributes to a color (incl. Bootstrap's color
+// custom properties like --bs-text-opacity / --bs-primary-rgb).
+const isColorRelatedProperty = (property: string): boolean => {
+  const p = property.toLowerCase();
+  return (
+    p.startsWith('--') ||
+    p === 'color' ||
+    p === 'background' ||
+    p === 'background-color' ||
+    p.endsWith('-color') ||
+    p === 'fill' ||
+    p === 'stroke'
+  );
+};
+
+// A rule is "primarily a color rule" when every declaration only sets a color
+// (or a related custom property). This separates color utilities such as
+// .text-primary or .bg-dark (whose sole purpose is a color) from component
+// classes like .nav-link or .navbar-brand that merely include a color among
+// layout/spacing/typography properties - the latter should not show a swatch.
+const isPrimarilyColorRule = (block: csstree.Block): boolean => {
+  let hasDeclaration = false;
+  let allColorRelated = true;
+
+  block.children.forEach((child) => {
+    if (child.type === 'Declaration') {
+      hasDeclaration = true;
+      if (!isColorRelatedProperty(child.property)) {
+        allColorRelated = false;
+      }
+    }
+  });
+
+  return hasDeclaration && allColorRelated;
+};
+
 export const extractCssClasses = (css: string): CssClass[] => {
-  const classes: CssClass[] = [];
-  const uniqueClasses = new Set<string>();
+  // Keyed by class name, insertion-ordered. Properties come from the first rule
+  // a class appears in; a color may be filled in later by a qualifying rule.
+  const classMap = new Map<string, CssClass>();
 
   let ast: csstree.CssNode;
   try {
@@ -312,20 +349,43 @@ export const extractCssClasses = (css: string): CssClass[] => {
         return;
       }
 
+      // Classes that appear as a standalone single-class selector (e.g.
+      // ".text-primary"), as opposed to compound or descendant selectors like
+      // ".nav-tabs .nav-link.active". Only these may receive a color swatch.
+      const standaloneClasses = new Set<string>();
+      node.prelude.children.forEach((selectorNode) => {
+        if (selectorNode.type !== 'Selector') {
+          return;
+        }
+        const parts = selectorNode.children.toArray();
+        if (parts.length === 1 && parts[0].type === 'ClassSelector') {
+          standaloneClasses.add((parts[0] as csstree.ClassSelector).name);
+        }
+      });
+
       const selectorText = csstree.generate(node.prelude);
       const classProperties = formatRule(selectorText, node.block);
-      const color = findRuleColor(node.block, variables);
+      // Only derive a color when the rule's sole purpose is that color, so
+      // component rules (.nav-link, .navbar-brand, ...) don't yield swatches.
+      const ruleColor = isPrimarilyColorRule(node.block) ? findRuleColor(node.block, variables) : undefined;
 
       for (const className of classNames) {
-        if (!uniqueClasses.has(className)) {
-          uniqueClasses.add(className);
-          classes.push({ className, classProperties, color });
+        // A swatch is attributed only to a class that is the standalone subject
+        // of a pure color rule - never to classes pulled from compound selectors
+        // (e.g. ".active", ".nav-item") or to component classes.
+        const color = ruleColor && standaloneClasses.has(className) ? ruleColor : undefined;
+
+        const existing = classMap.get(className);
+        if (!existing) {
+          classMap.set(className, { className, classProperties, color });
+        } else if (!existing.color && color) {
+          existing.color = color;
         }
       }
     },
   });
 
-  return classes;
+  return Array.from(classMap.values());
 };
 
 const fetchBootstrapCss = async (version: string): Promise<string> => {

@@ -3,10 +3,9 @@ import * as vscode from 'vscode';
 export interface BootstrapConfig {
   version: string;
   isActive: boolean;
-  showSuggestions: boolean;
-  autoComplete: boolean;
   hoverEnabled: boolean;
   colorPreviewEnabled: boolean;
+  sortOnSave: boolean;
   useLocalFile?: boolean;
   cssFilePath?: string;
   languageSupport?: string[];
@@ -41,10 +40,9 @@ export class Config {
     const config = {
       version: this.config.get<string>('bsVersion') || this.defaultVersion,
       isActive: this.config.get<boolean>('enable') ?? true,
-      showSuggestions: this.config.get<boolean>('showSuggestions') ?? true,
-      autoComplete: this.config.get<boolean>('autoComplete') ?? true,
       hoverEnabled: this.config.get<boolean>('enableHover') ?? true,
       colorPreviewEnabled: this.config.get<boolean>('enableColorPreview') ?? true,
+      sortOnSave: this.config.get<boolean>('sortOnSave') ?? false,
       useLocalFile: this.config.get<boolean>('useLocalFile', false),
       cssFilePath: this.config.get<string>('cssFilePath', ''),
       languageSupport: this.config.get<string[]>('languageSupport', []),
@@ -62,10 +60,9 @@ export class Config {
     const keyMap: Record<keyof BootstrapConfig, string> = {
       version: 'bsVersion',
       isActive: 'enable',
-      showSuggestions: 'showSuggestions',
-      autoComplete: 'autoComplete',
       hoverEnabled: 'enableHover',
       colorPreviewEnabled: 'enableColorPreview',
+      sortOnSave: 'sortOnSave',
       useLocalFile: 'useLocalFile',
       cssFilePath: 'cssFilePath',
       languageSupport: 'languageSupport',

@@ -1,7 +1,7 @@
 {
   "name": "bootstrap-intellisense",
   "displayName": "Bootstrap IntelliSense",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "description": "Enhance Bootstrap development with CSS class autocompletion for efficient coding in Visual Studio Code.",
   "categories": [
     "Linters",
@@ -36,9 +36,9 @@
           "type": "object",
           "default": {
             "enable": true,
-            "showSuggestions": true,
-            "autoComplete": true,
-            "enableHover": true
+            "enableHover": true,
+            "enableColorPreview": true,
+            "sortOnSave": false
           },
           "properties": {
             "enable": {
@@ -50,16 +50,6 @@
               "type": "string",
               "description": "Selected Bootstrap version (defaults to the newest available when unset)"
             },
-            "showSuggestions": {
-              "type": "boolean",
-              "default": true,
-              "description": "Show Bootstrap class suggestions while typing"
-            },
-            "autoComplete": {
-              "type": "boolean",
-              "default": true,
-              "description": "Automatically insert the selected class"
-            },
             "enableHover": {
               "type": "boolean",
               "default": true,
@@ -69,6 +59,11 @@
               "type": "boolean",
               "default": true,
               "description": "Show a color swatch next to Bootstrap color classes in the editor"
+            },
+            "sortOnSave": {
+              "type": "boolean",
+              "default": false,
+              "description": "Automatically sort Bootstrap classes on save (Layout → Spacing → Components → Utilities)"
             }
           },
           "description": "Bootstrap IntelliSense configuration"
@@ -83,6 +78,14 @@
       {
         "command": "bootstrap-intelliSense.reloadCache",
         "title": "Bootstrap IntelliSense: Reload / Clear Class Cache"
+      },
+      {
+        "command": "bootstrap-intelliSense.toggleSortOnSave",
+        "title": "Bootstrap IntelliSense: Toggle Class Sorting on Save"
+      },
+      {
+        "command": "bootstrap-intelliSense.sortClasses",
+        "title": "Bootstrap IntelliSense: Sort Classes in Current File"
       }
     ],
     "icons": {

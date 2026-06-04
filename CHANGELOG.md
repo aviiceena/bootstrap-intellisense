@@ -1,5 +1,28 @@
 # Change Log
 
+## v3.2.0 2026-06-04
+
+### Added
+
+- **Inline color swatches in the editor**: color utility classes (e.g. `bg-primary`, `text-black-50`) show a small color box directly to the left of the class name while you edit. Toggle via the menu or the new `enableColorPreview` setting (enabled by default).
+- **Bootstrap class sorting**: sort classes in the canonical order Layout → Spacing → Components → Utilities. Enable automatic sorting on save with `sortOnSave`, toggle it from the menu, or run **Sort Classes in Current File** from the command palette.
+- Transparent colors (e.g. `text-black-50`) now resolve to 8-digit hex codes (`#RRGGBBAA`) with correct alpha in swatches and hover previews.
+
+### Changed
+
+- Removed the `showSuggestions` and `autoComplete` settings; completion is always active when the extension is enabled (`enable: true`).
+- Multi-line `class` attributes are now fully supported for inline swatches, hover, and class sorting (not just autocomplete).
+- Provider reload is skipped when only `sortOnSave` changes, avoiding unnecessary restarts.
+- **Reload / Clear Class Cache** now waits for color data to reload and shows clearer feedback when the extension is disabled or no cache files exist.
+
+### Fixed
+
+- Color swatches no longer appear on non-color component classes such as `nav-link`, `nav-item`, `navbar-brand`, or `active`.
+- Fixed orphaned inline swatches stacking up after switching Bootstrap versions.
+- Fixed split-editor views not updating swatches in non-active panes.
+- Improved class-context detection (`data-class` false positives, JS string literals, all arguments in `cn()`/`clsx()` calls).
+- Decoration types for unused colors are now cleaned up to prevent memory growth in long sessions.
+
 ## v3.1.1 2026-06-04
 
 - Updated the extension icon

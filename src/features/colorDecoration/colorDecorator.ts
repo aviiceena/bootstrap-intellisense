@@ -24,7 +24,7 @@ export class ColorDecorator {
   // className -> resolved hex color, for the currently configured Bootstrap source.
   private colorByClass: Map<string, string> | undefined;
   private disposables: vscode.Disposable[] = [];
-  private updateTimer: ReturnType<typeof setTimeout> | undefined;
+  private updateTimers = new Map<vscode.TextEditor, ReturnType<typeof setTimeout>>();
   // Set once dispose() runs. Guards the async register() flow: dispose() can be
   // called while register() is still awaiting getClasses() (e.g. on a quick
   // version switch). Without this flag the disposed instance would resume,
@@ -58,9 +58,10 @@ export class ColorDecorator {
         }
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
-        const editor = vscode.window.activeTextEditor;
-        if (editor && event.document === editor.document) {
-          this.scheduleUpdate(editor);
+        for (const editor of vscode.window.visibleTextEditors) {
+          if (editor.document === event.document) {
+            this.scheduleUpdate(editor);
+          }
         }
       }),
       vscode.window.onDidChangeVisibleTextEditors((editors) => {
@@ -89,10 +90,17 @@ export class ColorDecorator {
   }
 
   private scheduleUpdate(editor: vscode.TextEditor): void {
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
+    const existing = this.updateTimers.get(editor);
+    if (existing) {
+      clearTimeout(existing);
     }
-    this.updateTimer = setTimeout(() => this.updateDecorations(editor), UPDATE_DELAY_MS);
+    this.updateTimers.set(
+      editor,
+      setTimeout(() => {
+        this.updateTimers.delete(editor);
+        this.updateDecorations(editor);
+      }, UPDATE_DELAY_MS),
+    );
   }
 
   // Lazily creates (and caches) a decoration type that draws a small swatch box
@@ -115,6 +123,48 @@ export class ColorDecorator {
     return type;
   }
 
+  /** Collects swatch colors currently used in a document's class strings. */
+  private collectUsedColors(document: vscode.TextDocument): Set<string> {
+    const used = new Set<string>();
+    if (!this.colorByClass) {
+      return used;
+    }
+
+    const text = document.getText();
+    for (const valueRange of findClassValueRanges(text)) {
+      const segment = text.slice(valueRange.start, valueRange.end);
+      CLASS_TOKEN.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = CLASS_TOKEN.exec(segment)) !== null) {
+        const color = this.colorByClass.get(match[0]);
+        if (color) {
+          used.add(color);
+        }
+      }
+    }
+    return used;
+  }
+
+  // Disposes decoration types that no visible editor uses anymore.
+  private pruneUnusedDecorationTypes(): void {
+    const usedColors = new Set<string>();
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (!languageSupport.includes(editor.document.languageId)) {
+        continue;
+      }
+      for (const color of this.collectUsedColors(editor.document)) {
+        usedColors.add(color);
+      }
+    }
+
+    for (const color of [...this.decorationTypes.keys()]) {
+      if (!usedColors.has(color)) {
+        this.decorationTypes.get(color)?.dispose();
+        this.decorationTypes.delete(color);
+      }
+    }
+  }
+
   private updateDecorations(editor: vscode.TextEditor): void {
     if (this.disposed || !this.isActive || !this.colorByClass) {
       return;
@@ -124,34 +174,31 @@ export class ColorDecorator {
     // linger (e.g. after switching a file's language mode).
     if (!languageSupport.includes(editor.document.languageId)) {
       this.clearDecorations(editor);
+      this.pruneUnusedDecorationTypes();
       return;
     }
 
     const rangesByColor = new Map<string, vscode.Range[]>();
     const document = editor.document;
+    const text = document.getText();
+    const valueRanges = findClassValueRanges(text);
 
-    for (let line = 0; line < document.lineCount; line++) {
-      const lineText = document.lineAt(line).text;
-      const valueRanges = findClassValueRanges(lineText);
+    for (const valueRange of valueRanges) {
+      const segment = text.slice(valueRange.start, valueRange.end);
 
-      for (const valueRange of valueRanges) {
-        const segment = lineText.slice(valueRange.start, valueRange.end);
-
-        CLASS_TOKEN.lastIndex = 0;
-        let match: RegExpExecArray | null;
-        while ((match = CLASS_TOKEN.exec(segment)) !== null) {
-          const color = this.colorByClass.get(match[0]);
-          if (!color) {
-            continue;
-          }
-
-          // Zero-width range at the class start: the `before` swatch renders just
-          // to the left of the class name without covering any text.
-          const position = new vscode.Position(line, valueRange.start + match.index);
-          const ranges = rangesByColor.get(color) ?? [];
-          ranges.push(new vscode.Range(position, position));
-          rangesByColor.set(color, ranges);
+      CLASS_TOKEN.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = CLASS_TOKEN.exec(segment)) !== null) {
+        const color = this.colorByClass.get(match[0]);
+        if (!color) {
+          continue;
         }
+
+        const tokenOffset = valueRange.start + match.index;
+        const position = document.positionAt(tokenOffset);
+        const ranges = rangesByColor.get(color) ?? [];
+        ranges.push(new vscode.Range(position, position));
+        rangesByColor.set(color, ranges);
       }
     }
 
@@ -161,6 +208,7 @@ export class ColorDecorator {
     for (const [color, ranges] of rangesByColor) {
       editor.setDecorations(this.getDecorationType(color), ranges);
     }
+    this.pruneUnusedDecorationTypes();
   }
 
   private clearDecorations(editor: vscode.TextEditor): void {
@@ -171,10 +219,10 @@ export class ColorDecorator {
 
   public dispose(): void {
     this.disposed = true;
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
-      this.updateTimer = undefined;
+    for (const timer of this.updateTimers.values()) {
+      clearTimeout(timer);
     }
+    this.updateTimers.clear();
     for (const type of this.decorationTypes.values()) {
       type.dispose();
     }

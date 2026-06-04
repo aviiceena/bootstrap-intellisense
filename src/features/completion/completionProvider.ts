@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getClasses } from '../../core/bootstrap';
 import { Config } from '../../core/config';
 import { getClassValueAtCursor } from '../../core/classContext';
+import { getClassCategory } from '../../core/classSorting';
 
 // How many characters before the cursor to inspect when detecting a class
 // context. Large enough to cover multi-line class attributes, small enough to
@@ -80,8 +81,6 @@ export class CompletionProvider {
   constructor(
     private isActive: boolean,
     private bootstrapVersion: string,
-    private showSuggestions: boolean = true,
-    private autoComplete: boolean = true,
     useLocalFile: boolean = false,
     cssFilePath: string = '',
   ) {
@@ -93,7 +92,7 @@ export class CompletionProvider {
   }
 
   public register(context: vscode.ExtensionContext): vscode.Disposable | undefined {
-    if (this.isActive && this.showSuggestions) {
+    if (this.isActive) {
       this.provider = vscode.languages.registerCompletionItemProvider(
         languageSupport,
         {
@@ -132,10 +131,6 @@ export class CompletionProvider {
       return false;
     }
 
-    if (!this.showSuggestions) {
-      return false;
-    }
-
     // Check if the current language is supported
     if (!languageSupport.includes(document.languageId)) {
       return false;
@@ -143,26 +138,6 @@ export class CompletionProvider {
 
     const textBefore = this.getTextBeforeCursor(document, position);
     return getClassValueAtCursor(textBefore) !== undefined;
-  }
-
-  private getClassCategory(className: string): string {
-    // Layout classes
-    if (/^(container|row|col|grid|flex|d-|order-|offset-|g-)/.test(className)) {
-      return '1-layout';
-    }
-
-    // Components
-    if (/^(btn|card|nav|navbar|modal|form|input|dropdown|alert|badge|list|table)/.test(className)) {
-      return '2-components';
-    }
-
-    // Utilities
-    if (/^(m-|p-|text-|bg-|border|rounded|shadow|w-|h-|position-|float-|align|justify)/.test(className)) {
-      return '3-utilities';
-    }
-
-    // Other
-    return '4-other';
   }
 
   private getClassParts(className: string): number {
@@ -216,12 +191,12 @@ export class CompletionProvider {
             documentation.appendMarkdown(`${swatchColor}\n\n`);
           }
         } else {
-          item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
+          item.detail = `Bootstrap ${getClassCategory(className).toUpperCase()}`;
         }
         documentation.appendCodeblock(classProperties, 'css');
         item.documentation = documentation;
 
-        item.insertText = this.autoComplete ? className : '';
+        item.insertText = className;
         const parts = this.getClassParts(className);
         item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
         return item;

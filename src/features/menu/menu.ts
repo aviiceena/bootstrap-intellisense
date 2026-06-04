@@ -51,6 +51,13 @@ export class Menu {
       },
       {
         label: `${
+          this.statusBar.getSortOnSave()
+            ? '$(list-unordered) Disable class sorting on save'
+            : '$(list-ordered) Enable class sorting on save'
+        }`,
+      },
+      {
+        label: `${
           this.statusBar.getIsActive()
             ? '$(bootstrap-icon-disable) Disable completion'
             : '$(bootstrap-icon-enable) Enable completion'
@@ -81,6 +88,13 @@ export class Menu {
             : '$(symbol-color) Enable color preview'
         }`:
           await this.statusBar.toggleColorPreview();
+          break;
+        case `${
+          this.statusBar.getSortOnSave()
+            ? '$(list-unordered) Disable class sorting on save'
+            : '$(list-ordered) Enable class sorting on save'
+        }`:
+          await this.statusBar.toggleSortOnSave();
           break;
         case '$(versions) Select Bootstrap version':
         case `$(versions) Select Bootstrap version (v${this.statusBar.getBootstrapVersion()})`:
