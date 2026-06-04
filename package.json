@@ -64,6 +64,11 @@
               "type": "boolean",
               "default": true,
               "description": "Show Bootstrap class documentation on hover"
+            },
+            "enableColorPreview": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show a color swatch next to Bootstrap color classes in the editor"
             }
           },
           "description": "Bootstrap IntelliSense configuration"

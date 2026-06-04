@@ -6,6 +6,7 @@ export interface BootstrapConfig {
   showSuggestions: boolean;
   autoComplete: boolean;
   hoverEnabled: boolean;
+  colorPreviewEnabled: boolean;
   useLocalFile?: boolean;
   cssFilePath?: string;
   languageSupport?: string[];
@@ -43,6 +44,7 @@ export class Config {
       showSuggestions: this.config.get<boolean>('showSuggestions') ?? true,
       autoComplete: this.config.get<boolean>('autoComplete') ?? true,
       hoverEnabled: this.config.get<boolean>('enableHover') ?? true,
+      colorPreviewEnabled: this.config.get<boolean>('enableColorPreview') ?? true,
       useLocalFile: this.config.get<boolean>('useLocalFile', false),
       cssFilePath: this.config.get<string>('cssFilePath', ''),
       languageSupport: this.config.get<string[]>('languageSupport', []),
@@ -63,6 +65,7 @@ export class Config {
       showSuggestions: 'showSuggestions',
       autoComplete: 'autoComplete',
       hoverEnabled: 'enableHover',
+      colorPreviewEnabled: 'enableColorPreview',
       useLocalFile: 'useLocalFile',
       cssFilePath: 'cssFilePath',
       languageSupport: 'languageSupport',

@@ -8,6 +8,7 @@ export class StatusBar {
   private cssFilePath: string = '';
   private languageSupport: string[] = [];
   private hoverEnabled: boolean = true;
+  private colorPreviewEnabled: boolean = true;
   private callbacks: ((
     isActive: boolean,
     useLocalFile: boolean,
@@ -36,6 +37,7 @@ export class StatusBar {
         cssFilePath: string;
         languageSupport: string[];
         enableHover: boolean;
+        enableColorPreview: boolean;
       }>('bootstrapIntelliSense');
 
       this.isActive = bootstrapConfig?.enable ?? true;
@@ -44,6 +46,7 @@ export class StatusBar {
       this.cssFilePath = bootstrapConfig?.cssFilePath ?? '';
       this.languageSupport = bootstrapConfig?.languageSupport ?? [];
       this.hoverEnabled = bootstrapConfig?.enableHover ?? true;
+      this.colorPreviewEnabled = bootstrapConfig?.enableColorPreview ?? true;
     } catch (error) {
       this.isActive = true;
       this.bootstrapVersion = this.defaultVersion;
@@ -51,6 +54,7 @@ export class StatusBar {
       this.cssFilePath = '';
       this.languageSupport = [];
       this.hoverEnabled = true;
+      this.colorPreviewEnabled = true;
     }
   }
 
@@ -80,6 +84,7 @@ export class StatusBar {
         cssFilePath: this.cssFilePath,
         languageSupport: this.languageSupport,
         enableHover: this.hoverEnabled,
+        enableColorPreview: this.colorPreviewEnabled,
       };
       await config.update('bootstrapIntelliSense', settings, this.getConfigurationTarget(config));
     } catch (error) {
@@ -137,6 +142,28 @@ export class StatusBar {
 
   public getHoverEnabled(): boolean {
     return this.hoverEnabled;
+  }
+
+  public getColorPreviewEnabled(): boolean {
+    return this.colorPreviewEnabled;
+  }
+
+  public async toggleColorPreview() {
+    const oldStatus = this.colorPreviewEnabled;
+    this.colorPreviewEnabled = !this.colorPreviewEnabled;
+
+    try {
+      await this.saveSettings();
+      this.callbacks.forEach((callback) =>
+        callback(this.isActive, this.useLocalFile, this.cssFilePath, this.bootstrapVersion, this.languageSupport),
+      );
+
+      const statusChange = this.colorPreviewEnabled ? 'enabled' : 'disabled';
+      vscode.window.showInformationMessage(`Bootstrap IntelliSense color preview has been ${statusChange}`);
+    } catch (error) {
+      this.colorPreviewEnabled = oldStatus;
+      vscode.window.showErrorMessage('Error toggling Bootstrap IntelliSense color preview');
+    }
   }
 
   public async toggleHover() {

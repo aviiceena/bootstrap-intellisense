@@ -44,6 +44,13 @@ export class Menu {
       },
       {
         label: `${
+          this.statusBar.getColorPreviewEnabled()
+            ? '$(circle-slash) Disable color preview'
+            : '$(symbol-color) Enable color preview'
+        }`,
+      },
+      {
+        label: `${
           this.statusBar.getIsActive()
             ? '$(bootstrap-icon-disable) Disable completion'
             : '$(bootstrap-icon-enable) Enable completion'
@@ -67,6 +74,13 @@ export class Menu {
           break;
         case `${this.statusBar.getHoverEnabled() ? '$(eye-closed) Disable hover' : '$(eye) Enable hover'}`:
           await this.statusBar.toggleHover();
+          break;
+        case `${
+          this.statusBar.getColorPreviewEnabled()
+            ? '$(circle-slash) Disable color preview'
+            : '$(symbol-color) Enable color preview'
+        }`:
+          await this.statusBar.toggleColorPreview();
           break;
         case '$(versions) Select Bootstrap version':
         case `$(versions) Select Bootstrap version (v${this.statusBar.getBootstrapVersion()})`:

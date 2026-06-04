@@ -21,7 +21,7 @@ interface CacheFile {
 
 // Bump this whenever the extraction logic or cache structure changes,
 // so previously cached files are considered stale and rebuilt.
-const CACHE_SCHEMA_VERSION = 5;
+const CACHE_SCHEMA_VERSION = 8;
 
 // Maximum age of a cache entry before it is rebuilt (30 days).
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -134,8 +134,48 @@ const COLOR_PROPERTIES = [
 
 const clampChannel = (n: number): number => Math.max(0, Math.min(255, Math.round(n)));
 
-const rgbToHex = (r: number, g: number, b: number): string =>
-  '#' + [r, g, b].map((c) => clampChannel(c).toString(16).padStart(2, '0')).join('');
+// Builds a hex color. Opaque colors become a 6-digit #RRGGBB; semi-transparent
+// colors (e.g. text-black-50) become an 8-digit #RRGGBBAA, so the alpha is part
+// of the hex code shown to the user. The completion list converts the 8-digit
+// form to rgba() where needed (see completionProvider), since VS Code's
+// completion swatch parser does not recognise #RRGGBBAA.
+const formatColor = (r: number, g: number, b: number, a: number = 1): string => {
+  const base = '#' + [r, g, b].map((c) => clampChannel(c).toString(16).padStart(2, '0')).join('');
+  if (a >= 1) {
+    return base;
+  }
+  return base + clampChannel(a * 255).toString(16).padStart(2, '0');
+};
+
+// Resolves the alpha component of an rgb()/rgba() value, which may be a literal
+// number, a percentage, or a CSS variable (e.g. var(--bs-text-opacity)).
+const resolveAlpha = (raw: string | undefined, variables: Map<string, string>): number => {
+  if (!raw) {
+    return 1;
+  }
+
+  const value = raw.trim();
+  if (value === '') {
+    return 1;
+  }
+
+  if (/^[\d.]+%?$/.test(value)) {
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+      return value.endsWith('%') ? num / 100 : num;
+    }
+  }
+
+  const varMatch = value.match(/^var\(\s*(--[\w-]+)/);
+  if (varMatch) {
+    const resolved = variables.get(varMatch[1]);
+    if (resolved) {
+      return resolveAlpha(resolved, variables);
+    }
+  }
+
+  return 1;
+};
 
 // Resolve a CSS value to a concrete hex color, following Bootstrap's CSS custom
 // properties (e.g. "rgba(var(--bs-primary-rgb), var(--bs-bg-opacity))"). Returns
@@ -157,22 +197,24 @@ const resolveColor = (rawValue: string, variables: Map<string, string>, depth = 
   }
 
   // rgb()/rgba() whose channels come from a custom property: rgba(var(--x-rgb), a)
-  const rgbVarMatch = value.match(/^rgba?\(\s*var\((--[\w-]+)\)/i);
+  const rgbVarMatch = value.match(/^rgba?\(\s*var\((--[\w-]+)\)\s*[,/]?\s*([^)]*)\)/i);
   if (rgbVarMatch) {
     const resolved = variables.get(rgbVarMatch[1]);
     if (resolved) {
       const parts = resolved.split(',').map((p) => parseInt(p.trim(), 10));
       if (parts.length >= 3 && parts.slice(0, 3).every((n) => !isNaN(n))) {
-        return rgbToHex(parts[0], parts[1], parts[2]);
+        const alpha = resolveAlpha(rgbVarMatch[2], variables);
+        return formatColor(parts[0], parts[1], parts[2], alpha);
       }
     }
     return undefined;
   }
 
-  // Plain rgb()/rgba() with numeric channels.
-  const rgbMatch = value.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+  // Plain rgb()/rgba() with numeric channels and an optional alpha.
+  const rgbMatch = value.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?/i);
   if (rgbMatch) {
-    return rgbToHex(parseFloat(rgbMatch[1]), parseFloat(rgbMatch[2]), parseFloat(rgbMatch[3]));
+    const alpha = resolveAlpha(rgbMatch[4], variables);
+    return formatColor(parseFloat(rgbMatch[1]), parseFloat(rgbMatch[2]), parseFloat(rgbMatch[3]), alpha);
   }
 
   // A single var(--x) reference: resolve it recursively.

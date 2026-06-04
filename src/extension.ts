@@ -3,6 +3,7 @@ import { StatusBar } from './features/statusBar/statusBar';
 import { Menu } from './features/menu/menu';
 import { CompletionProvider, languageSupport, updateLanguageSupport } from './features/completion/completionProvider';
 import { HoverProvider } from './features/hover/hoverProvider';
+import { ColorDecorator } from './features/colorDecoration/colorDecorator';
 import { Container } from './core/container';
 import { Config } from './core/config';
 import { deleteAllBootstrapCaches } from './core/bootstrap';
@@ -10,6 +11,7 @@ import { getLatestBootstrapVersion } from './core/versions';
 
 let completionProvider: CompletionProvider | undefined;
 let hoverProvider: HoverProvider | undefined;
+let colorDecorator: ColorDecorator | undefined;
 const container = Container.getInstance();
 const config = Config.getInstance();
 
@@ -51,11 +53,27 @@ function recreateProviders(
       container.register('hoverProvider', hoverProvider);
       hoverProvider.register(context);
     }
+
+    // Update ColorDecorator. Like hover, it can be toggled independently, so
+    // only recreate it when enabled.
+    if (colorDecorator) {
+      colorDecorator.dispose();
+      colorDecorator = undefined;
+    }
+    if (config.get<boolean>('enableColorPreview') ?? true) {
+      colorDecorator = new ColorDecorator(isActive, version, useLocalFile, cssFilePath);
+      container.register('colorDecorator', colorDecorator);
+      void colorDecorator.register(context);
+    }
   } else {
-    // If extension is not active, dispose of hover provider
+    // If extension is not active, dispose of hover provider and color decorator
     if (hoverProvider) {
       hoverProvider.dispose();
       hoverProvider = undefined;
+    }
+    if (colorDecorator) {
+      colorDecorator.dispose();
+      colorDecorator = undefined;
     }
   }
 }
@@ -152,6 +170,10 @@ export function deactivate() {
   if (hoverProvider) {
     hoverProvider.dispose();
     hoverProvider = undefined;
+  }
+  if (colorDecorator) {
+    colorDecorator.dispose();
+    colorDecorator = undefined;
   }
   container.clear();
 }

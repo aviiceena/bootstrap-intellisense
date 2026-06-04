@@ -41,6 +41,27 @@ interface ClassEntry {
   color?: string;
 }
 
+// Matches an 8-digit #RRGGBBAA hex color (a translucent color).
+const HEX_WITH_ALPHA = /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/;
+
+// VS Code's completion swatch parser recognises 3-/6-digit hex and rgb()/rgba()/
+// hsl(), but NOT 8-digit #RRGGBBAA. For a translucent hex color this returns an
+// equivalent rgba() usable as the swatch source; opaque (6-digit) colors are
+// already parseable and returned unchanged.
+export function toCompletionSwatchColor(color: string): string {
+  const match = HEX_WITH_ALPHA.exec(color);
+  if (!match) {
+    return color;
+  }
+
+  const r = parseInt(match[1], 16);
+  const g = parseInt(match[2], 16);
+  const b = parseInt(match[3], 16);
+  const alpha = Math.round((parseInt(match[4], 16) / 255) * 100) / 100;
+  const alphaText = Number.isInteger(alpha) ? `${alpha}.0` : `${alpha}`;
+  return `rgba(${r}, ${g}, ${b}, ${alphaText})`;
+}
+
 // Pure helper so the filtering can be unit tested without the VS Code API.
 // Excludes already-used classes and pre-filters by the token currently being typed.
 export function filterClasses<T extends ClassEntry>(classes: T[], usedClasses: string[], currentPrefix: string): T[] {
@@ -174,17 +195,37 @@ export class CompletionProvider {
     // The token currently being typed; used to pre-filter the (potentially large) class list.
     const currentPrefix = enteredClasses[enteredClasses.length - 1] ?? '';
 
-    return filterClasses(this.cachedClasses, usedClasses, currentPrefix).map(({ className, classProperties, color }) => {
-      // For color classes, use the Color kind so VS Code renders a swatch. The
-      // swatch value is read from the `detail` field (must be a valid color).
-      const kind = color ? vscode.CompletionItemKind.Color : vscode.CompletionItemKind.Value;
-      const item = new vscode.CompletionItem(className, kind);
-      item.detail = color ?? `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
-      item.documentation = new vscode.MarkdownString().appendCodeblock(classProperties, 'css');
-      item.insertText = this.autoComplete ? className : '';
-      const parts = this.getClassParts(className);
-      item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
-      return item;
-    });
+    return filterClasses(this.cachedClasses, usedClasses, currentPrefix).map(
+      ({ className, classProperties, color }) => {
+        // For color classes, use the Color kind so VS Code renders a swatch. The
+        // swatch value is read from the `detail` field (must be a valid color).
+        const kind = color ? vscode.CompletionItemKind.Color : vscode.CompletionItemKind.Value;
+        const item = new vscode.CompletionItem(className, kind);
+
+        const documentation = new vscode.MarkdownString();
+        if (color) {
+          // Show the hex code (incl. alpha, e.g. #00000080) as the item detail.
+          item.detail = color;
+
+          // Opaque colors render the list swatch straight from the 6-digit hex
+          // detail. Translucent 8-digit hex is not parseable by VS Code's swatch
+          // parser, so put an equivalent rgba() at the very start of the
+          // documentation - the only spot (besides the very end) the parser reads.
+          const swatchColor = toCompletionSwatchColor(color);
+          if (swatchColor !== color) {
+            documentation.appendMarkdown(`${swatchColor}\n\n`);
+          }
+        } else {
+          item.detail = `Bootstrap ${this.getClassCategory(className).split('-')[1].toUpperCase()}`;
+        }
+        documentation.appendCodeblock(classProperties, 'css');
+        item.documentation = documentation;
+
+        item.insertText = this.autoComplete ? className : '';
+        const parts = this.getClassParts(className);
+        item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
+        return item;
+      },
+    );
   }
 }
