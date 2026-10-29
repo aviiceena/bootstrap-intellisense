@@ -170,6 +170,9 @@ export class CompletionProvider {
     // The token currently being typed; used to pre-filter the (potentially large) class list.
     const currentPrefix = enteredClasses[enteredClasses.length - 1] ?? '';
 
+    // Explicit range: some languages (e.g. Blade) treat "-" as a word separator
+    const replaceRange = new vscode.Range(position.translate(0, -currentPrefix.length), position);
+
     return filterClasses(this.cachedClasses, usedClasses, currentPrefix).map(
       ({ className, classProperties, color }) => {
         // For color classes, use the Color kind so VS Code renders a swatch. The
@@ -197,6 +200,8 @@ export class CompletionProvider {
         item.documentation = documentation;
 
         item.insertText = className;
+        item.filterText = className;
+        item.range = replaceRange;
         const parts = this.getClassParts(className);
         item.sortText = `${parts.toString().padStart(2, '0')}-${className}`;
         return item;

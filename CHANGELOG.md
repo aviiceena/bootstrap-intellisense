@@ -1,5 +1,11 @@
 # Change Log
 
+## v3.2.1 2026-10-29
+
+### Fixed
+
+- Fixed autocomplete duplicating text when accepting a suggestion mid-token (e.g. `shadow-s` becoming `shadow-shadow-sm`) in languages whose word pattern treats `-` as a separator, such as Laravel Blade with custom language support.
+
 ## v3.2.0 2026-06-04
 
 ### Added
